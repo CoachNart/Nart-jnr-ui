@@ -598,6 +598,86 @@ export default function Home() {
     };
   }, [userId]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSignals() {
+      if (!authUser) {
+        if (!cancelled) {
+          setLiveSetups([]);
+          setApiLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setApiLoading(true);
+        setApiError(null);
+
+        const base =
+          process.env.NEXT_PUBLIC_NART_API ||
+          "https://nart-jnr-1.onrender.com";
+
+        const token = await auth.currentUser?.getIdToken();
+
+        if (!token) {
+          throw new Error("Authentication token unavailable");
+        }
+
+        const response = await fetch(
+          `${base}/api/signals`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        const payload = await response.json();
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(
+            payload.error ||
+            `Signals API returned ${response.status}`
+          );
+        }
+
+        const signals = Array.isArray(payload.data?.signals)
+          ? payload.data.signals
+          : [];
+
+        if (!cancelled) {
+          setLiveSetups(signals);
+        }
+      } catch (error) {
+        console.error(
+          "❌ Signal loading failed:",
+          error
+        );
+
+        if (!cancelled) {
+          setLiveSetups([]);
+          setApiError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load signals"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setApiLoading(false);
+        }
+      }
+    }
+
+    loadSignals();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser]);
+
   async function loginWithGoogle() {
     try {
       setAuthError(null);
@@ -1093,48 +1173,7 @@ export default function Home() {
 
             </div>
 
-            {/* QUICK NAV */}
-            <div className="grid grid-cols-3 gap-2">
-
-              <button
-                onClick={() => goTo("setups")}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-3 py-4 text-center transition hover:bg-white/[0.05]"
-              >
-                <p className="text-sm font-bold text-zinc-300">
-                  ◈
-                </p>
-                <p className="mt-2 text-[8px] font-bold tracking-[0.12em] text-zinc-600">
-                  SETUPS
-                </p>
-              </button>
-
-              <button
-                onClick={() => goTo("analysis")}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-3 py-4 text-center transition hover:bg-white/[0.05]"
-              >
-                <p className="text-sm font-bold text-zinc-300">
-                  ◇
-                </p>
-                <p className="mt-2 text-[8px] font-bold tracking-[0.12em] text-zinc-600">
-                  ANALYSIS
-                </p>
-              </button>
-
-              <button
-                onClick={() => goTo("profile")}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-3 py-4 text-center transition hover:bg-white/[0.05]"
-              >
-                <p className="text-sm font-bold text-zinc-300">
-                  ○
-                </p>
-                <p className="mt-2 text-[8px] font-bold tracking-[0.12em] text-zinc-600">
-                  PROFILE
-                </p>
-              </button>
-
-            </div>
-
-          </section>
+            </section>
         )}
 
         {/* SETUPS */}
