@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
-import { auth, googleProvider, initAnalytics } from "@/lib/firebase";
 
 type Tab = "home" | "setups" | "analysis" | "profile";
 
@@ -498,12 +496,20 @@ export default function Home() {
       remaining: number;
     } | null>(null);
 
+  const [authMode, setAuthMode] =
+    useState<"login" | "signup">("login");
 
+  const [authEmail, setAuthEmail] =
+    useState("");
 
+  const [authPassword, setAuthPassword] =
+    useState("");
 
   const [authLoading, setAuthLoading] =
     useState(true);
 
+  const [authSubmitting, setAuthSubmitting] =
+    useState(false);
 
   const [authUser, setAuthUser] =
     useState<{
@@ -519,72 +525,373 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
 
-    initAnalytics().catch((error) => {
-      console.error("❌ Firebase Analytics failed:", error);
-    });
+    async function loadAuth() {
+      try {
+        const base =
+          process.env.NEXT_PUBLIC_NART_API ||
+          "http://127.0.0.1:8787";
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (cancelled) return;
+        const response = await fetch(
+          `${base}/api/auth/me`,
+          {
+            credentials: "include",
+            cache: "no-store",
+          }
+        );
 
-      if (user) {
-        const firebaseUser = {
-          id: user.uid,
-          email: user.email || "",
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-        };
+        const payload = await response.json();
 
-        setAuthUser(firebaseUser);
-        setUserId(user.uid);
-      } else {
-        setAuthUser(null);
-        setUserId("");
+        if (
+          response.ok &&
+          payload.ok &&
+          payload.data
+        ) {
+          if (!cancelled) {
+            setAuthUser(payload.data);
+            setUserId(payload.data.id);
+          }
+        } else {
+          if (!cancelled) {
+            setAuthUser(null);
+            setUserId("");
+          }
+        }
+      } catch (error) {
+        console.error(
+          "❌ Authentication check failed:",
+          error
+        );
+
+        if (!cancelled) {
+          setAuthUser(null);
+          setUserId("");
+        }
+      } finally {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
+      }
+    }
+
+    loadAuth();
+
+    async function loadAnalysis() {
+      try {
+        setApiLoading(true);
+        setApiError(null);
+
+        const base =
+          process.env.NEXT_PUBLIC_NART_API ||
+          "http://127.0.0.1:8787";
+
+        const response = await fetch(
+          `${base}/api/analysis?symbol=BTCUSDT`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `API returned ${response.status}`
+          );
+        }
+
+        const payload = await response.json();
+
+        if (!payload.ok) {
+          throw new Error(
+            payload.error || "KitSetups API error"
+          );
+        }
+
+        if (!cancelled) {
+          setLiveAnalysis(payload.data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setApiError(
+            error instanceof Error
+              ? error.message
+              : "Unable to reach KitSetups API"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setApiLoading(false);
+        }
+      }
+    }
+
+    loadAnalysis();
+
+    async function loadSetups() {
+      try {
+        const base =
+          process.env.NEXT_PUBLIC_NART_API ||
+          "http://127.0.0.1:8787";
+
+        const response = await fetch(
+          `${base}/api/signals`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Signals API returned ${response.status}`
+          );
+        }
+
+        const payload = await response.json();
+
+        if (!payload.ok) {
+          throw new Error(
+            payload.error || "Signals API error"
+          );
+        }
+
+        const signals = Array.isArray(payload.data?.signals)
+          ? payload.data.signals
+          : [];
+
+        if (!cancelled) {
+          setLiveSetups(signals as NartSetup[]);
+        }
+      } catch (error) {
+        console.error(
+          "❌ Live signal loading failed:",
+          error
+        );
+      }
+    }
+
+    async function loadLivePrices(signals: NartSetup[]) {
+      const base =
+        process.env.NEXT_PUBLIC_NART_API ||
+        "http://127.0.0.1:8787";
+
+      const updated = await Promise.all(
+        signals.map(async (signal) => {
+          try {
+            const response = await fetch(
+              `${base}/api/analysis?symbol=${encodeURIComponent(signal.symbol)}`,
+              { cache: "no-store" }
+            );
+
+            if (!response.ok) return signal;
+
+            const payload = await response.json();
+            const price = payload?.data?.price;
+
+            return Number.isFinite(Number(price))
+              ? { ...signal, price: Number(price) }
+              : signal;
+          } catch {
+            return signal;
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setLiveSetups(updated);
+      }
+    }
+
+    async function refreshSetupsAndPrices() {
+      try {
+        const base =
+          process.env.NEXT_PUBLIC_NART_API ||
+          "http://127.0.0.1:8787";
+
+        const response = await fetch(
+          `${base}/api/signals`,
+          { cache: "no-store" }
+        );
+
+        if (!response.ok) return;
+
+        const payload = await response.json();
+
+        const signals = Array.isArray(payload.data?.signals)
+          ? payload.data.signals
+          : [];
+
+        await loadLivePrices(signals as NartSetup[]);
+      } catch (error) {
+        console.error(
+          "❌ Live signal/price loading failed:",
+          error
+        );
+      }
+    }
+
+    loadSetups();
+    refreshSetupsAndPrices();
+
+    const signalRefresh = setInterval(() => {
+      if (!cancelled) {
+        refreshSetupsAndPrices();
+      }
+    }, 5 * 60 * 1000);
+
+    async function loadAccount() {
+      if (!authUser?.id) {
+        return;
       }
 
-      setAuthLoading(false);
-    });
+      try {
+        const base =
+          process.env.NEXT_PUBLIC_NART_API ||
+          "http://127.0.0.1:8787";
+
+        const response = await fetch(
+          `${base}/api/account?user=${encodeURIComponent(userId)}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const payload = await response.json();
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(
+            payload.error ||
+            `Account API returned ${response.status}`
+          );
+        }
+
+        if (!cancelled) {
+          setAccount(payload.data);
+        }
+      } catch (error) {
+        console.error(
+          "❌ Account loading failed:",
+          error
+        );
+      }
+    }
+
+    loadAccount();
 
     return () => {
       cancelled = true;
-      unsubscribe();
+      clearInterval(signalRefresh);
     };
-  }, []);
+  }, [userId]);
 
-  async function loginWithGoogle() {
+  async function submitAuth() {
+    setAuthError(null);
+
+    const email =
+      authEmail.trim().toLowerCase();
+
+    if (!email || !email.includes("@")) {
+      setAuthError("Enter a valid email address.");
+      return;
+    }
+
+    if (authPassword.length < 8) {
+      setAuthError(
+        "Password must be at least 8 characters."
+      );
+      return;
+    }
+
     try {
+      setAuthSubmitting(true);
+
+      const base =
+        process.env.NEXT_PUBLIC_NART_API ||
+        "http://127.0.0.1:8787";
+
+      const endpoint =
+        authMode === "signup"
+          ? "/api/auth/signup"
+          : "/api/auth/login";
+
+      const response = await fetch(
+        `${base}${endpoint}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            password: authPassword,
+          }),
+        }
+      );
+
+      const payload =
+        await response.json();
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.error ||
+          "Authentication failed."
+        );
+      }
+
+      const meResponse =
+        await fetch(
+          `${base}/api/auth/me`,
+          {
+            credentials: "include",
+            cache: "no-store",
+          }
+        );
+
+      const me =
+        await meResponse.json();
+
+      if (
+        !meResponse.ok ||
+        !me.ok ||
+        !me.data
+      ) {
+        throw new Error(
+          "Could not load your account."
+        );
+      }
+
+      setAuthUser(me.data);
+      setUserId(me.data.id);
+      setAuthPassword("");
       setAuthError(null);
-      setAuthLoading(true);
-
-      const result = await signInWithPopup(auth, googleProvider);
-
-      if (result.user) {
-        setAuthUser({
-          id: result.user.uid,
-          email: result.user.email || "",
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL,
-        });
-
-        setUserId(result.user.uid);
-      }
     } catch (error) {
-      console.error("❌ Firebase Google sign-in failed:", error);
-
-      if (error instanceof Error) {
-        setAuthError(error.message);
-      } else {
-        setAuthError("Google sign-in failed. Please try again.");
-      }
+      setAuthError(
+        error instanceof Error
+          ? error.message
+          : "Authentication failed."
+      );
     } finally {
-      setAuthLoading(false);
+      setAuthSubmitting(false);
     }
   }
 
   async function logout() {
     try {
-      await signOut(auth);
+      const base =
+        process.env.NEXT_PUBLIC_NART_API ||
+        "http://127.0.0.1:8787";
+
+      await fetch(
+        `${base}/api/auth/logout`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
     } catch (error) {
-      console.error("❌ Firebase logout failed:", error);
+      console.error(
+        "❌ Logout failed:",
+        error
+      );
     }
 
     setAuthUser(null);
@@ -617,29 +924,113 @@ export default function Home() {
     return (
       <main className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-5">
         <div className="w-full max-w-sm">
+
           <div className="mb-10">
             <p className="text-[9px] font-bold tracking-[0.28em] text-cyan-400/70">
-              KITSETUPS
+              KitSetups
             </p>
 
             <h1 className="mt-3 text-4xl font-black tracking-tight">
-              Welcome back.
+              {authMode === "login"
+                ? "Welcome back."
+                : "Create your account."}
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-zinc-500">
-              Sign in to access your market intelligence.
+              {authMode === "login"
+                ? "Your market intelligence is waiting."
+                : "Create your KitSetups account and start tracking the market."}
             </p>
           </div>
 
           <div className="rounded-[28px] border border-white/[0.07] bg-white/[0.025] p-5 shadow-2xl">
-            <button
-              type="button"
-              onClick={loginWithGoogle}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-4 text-[10px] font-black tracking-[0.12em] text-zinc-200 transition hover:bg-white/[0.06]"
+
+            <div className="mb-5 grid grid-cols-2 rounded-2xl bg-black/30 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login");
+                  setAuthError(null);
+                }}
+                className={`rounded-xl px-3 py-2.5 text-[10px] font-bold tracking-[0.12em] transition ${
+                  authMode === "login"
+                    ? "bg-white/[0.08] text-white"
+                    : "text-zinc-600"
+                }`}
+              >
+                LOGIN
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("signup");
+                  setAuthError(null);
+                }}
+                className={`rounded-xl px-3 py-2.5 text-[10px] font-bold tracking-[0.12em] transition ${
+                  authMode === "signup"
+                    ? "bg-white/[0.08] text-white"
+                    : "text-zinc-600"
+                }`}
+              >
+                SIGN UP
+              </button>
+            </div>
+
+            <a
+              href={`${process.env.NEXT_PUBLIC_NART_API || "http://127.0.0.1:8787"}/api/auth/google`}
+              className="mb-5 flex w-full items-center justify-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3.5 text-[10px] font-black tracking-[0.12em] text-zinc-200 transition hover:bg-white/[0.06]"
             >
               <span className="text-base font-bold">G</span>
               CONTINUE WITH GOOGLE
-            </button>
+            </a>
+
+            <div className="mb-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/[0.06]" />
+              <span className="text-[8px] font-bold tracking-[0.15em] text-zinc-700">
+                OR
+              </span>
+              <div className="h-px flex-1 bg-white/[0.06]" />
+            </div>
+
+            <label className="text-[9px] font-semibold tracking-[0.15em] text-zinc-600">
+              EMAIL
+            </label>
+
+            <input
+              type="email"
+              value={authEmail}
+              onChange={(e) =>
+                setAuthEmail(e.target.value)
+              }
+              placeholder="you@example.com"
+              autoComplete="email"
+              className="mt-2 mb-4 w-full rounded-2xl border border-white/[0.07] bg-black/30 px-4 py-3.5 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-cyan-400/30"
+            />
+
+            <label className="text-[9px] font-semibold tracking-[0.15em] text-zinc-600">
+              PASSWORD
+            </label>
+
+            <input
+              type="password"
+              value={authPassword}
+              onChange={(e) =>
+                setAuthPassword(e.target.value)
+              }
+              placeholder="••••••••"
+              autoComplete={
+                authMode === "login"
+                  ? "current-password"
+                  : "new-password"
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  submitAuth();
+                }
+              }}
+              className="mt-2 w-full rounded-2xl border border-white/[0.07] bg-black/30 px-4 py-3.5 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-cyan-400/30"
+            />
 
             {authError && (
               <div className="mt-4 rounded-2xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3">
@@ -648,11 +1039,26 @@ export default function Home() {
                 </p>
               </div>
             )}
+
+            <button
+              type="button"
+              disabled={authSubmitting}
+              onClick={submitAuth}
+              className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3.5 text-[10px] font-black tracking-[0.16em] text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {authSubmitting
+                ? "PLEASE WAIT..."
+                : authMode === "login"
+                  ? "ENTER KitSetups"
+                  : "CREATE ACCOUNT"}
+            </button>
+
           </div>
 
           <p className="mt-5 text-center text-[9px] tracking-[0.08em] text-zinc-700">
-            Secured by Firebase Authentication.
+            Your session stays active for 30 days.
           </p>
+
         </div>
       </main>
     );
