@@ -1290,10 +1290,10 @@ export default function Home() {
                         className="w-full text-left"
                       >
 
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex min-w-0 items-start justify-between gap-3">
 
-                          <div>
-                            <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 items-center gap-2">
                               <h2 className="text-xl font-black tracking-tight">
                                 {setup.pair}
                               </h2>
@@ -1311,13 +1311,13 @@ export default function Home() {
                               </span>
                             </div>
 
-                            <p className="mt-2 text-[9px] font-semibold tracking-[0.15em] text-zinc-600">
+                            <p className="mt-2 whitespace-nowrap text-[9px] font-semibold tracking-[0.15em] text-zinc-600">
                               {setup.status}
                             </p>
                           </div>
 
-                          <div className="text-right">
-                            <p className="text-[8px] font-bold tracking-[0.15em] text-zinc-600">
+                          <div className="shrink-0 text-right">
+                            <p className="whitespace-nowrap text-[8px] font-bold tracking-[0.15em] text-zinc-600">
                               CONFIDENCE
                             </p>
 
