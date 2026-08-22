@@ -550,6 +550,54 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAccount() {
+      if (!userId) {
+        setAccount(null);
+        return;
+      }
+
+      try {
+        const base =
+          process.env.NEXT_PUBLIC_NART_API ||
+          "http://127.0.0.1:8787";
+
+        const response = await fetch(
+          `${base}/api/account?user=${encodeURIComponent(userId)}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const payload = await response.json();
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(
+            payload.error ||
+            `Account API returned ${response.status}`
+          );
+        }
+
+        if (!cancelled) {
+          setAccount(payload.data);
+        }
+      } catch (error) {
+        console.error(
+          "❌ Account loading failed:",
+          error
+        );
+      }
+    }
+
+    loadAccount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
   async function loginWithGoogle() {
     try {
       setAuthError(null);
@@ -728,12 +776,11 @@ export default function Home() {
         {/* HEADER */}
         <header className="flex items-center justify-between border-b border-white/[0.05] py-5">
           <button onClick={() => goTo("home")} className="text-left">
-            <p className="nart-cyan-glow text-lg font-black tracking-tight">
-              NART<span className="text-cyan-300"> JNR</span>
-            </p>
-            <p className="text-[8px] tracking-[0.25em] text-zinc-600">
-              MARKET INTELLIGENCE
-            </p>
+            <img
+              src="https://www.t3kit.xyz/assets/images/logo.webp"
+              alt="T3Kit"
+              className="h-9 w-auto object-contain"
+            />
           </button>
 
           <LiveBadge />
@@ -1333,26 +1380,34 @@ export default function Home() {
 
                     <span className="font-mono text-[9px] text-zinc-500">
                       {account
-                        ? `${account.monthlyUsage} / ${account.monthlyLimit}`
+                        ? account.monthlyLimit === null
+                          ? `${account.monthlyUsage} · UNLIMITED`
+                          : `${account.monthlyUsage} / ${account.monthlyLimit}`
                         : "SYNCING..."}
                     </span>
                   </div>
 
-                  <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                    <div
-                      className="h-full rounded-full bg-cyan-400 transition-all duration-500"
-                      style={{
-                        width: account
-                          ? `${Math.min(
-                              100,
-                              (account.monthlyUsage /
-                                Math.max(account.monthlyLimit, 1)) *
-                                100
-                            )}%`
-                          : "0%",
-                      }}
-                    />
-                  </div>
+                  {account?.monthlyLimit === null ? (
+                    <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                      <div className="h-full w-full rounded-full bg-cyan-400/60" />
+                    </div>
+                  ) : (
+                    <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                      <div
+                        className="h-full rounded-full bg-cyan-400 transition-all duration-500"
+                        style={{
+                          width: account
+                            ? `${Math.min(
+                                100,
+                                (account.monthlyUsage /
+                                  Math.max(account.monthlyLimit, 1)) *
+                                  100
+                              )}%`
+                            : "0%",
+                        }}
+                      />
+                    </div>
+                  )}
 
                 </div>
 
@@ -1375,7 +1430,7 @@ export default function Home() {
                       </p>
 
                       <p className="mt-0.5 text-[9px] text-zinc-600">
-                        100 setups · live intelligence
+                        Unlimited setups · live intelligence
                       </p>
                     </div>
 
@@ -1383,7 +1438,7 @@ export default function Home() {
 
                   <div className="text-right">
                     <p className="font-mono text-base font-black text-amber-300">
-                      $55
+                      $30
                     </p>
 
                     <p className="text-[7px] text-zinc-700">
@@ -1396,7 +1451,7 @@ export default function Home() {
                 <div className="mt-4 grid grid-cols-3 gap-2">
 
                   <div className="rounded-xl border border-white/[0.05] bg-black/20 p-2.5">
-                    <p className="text-sm font-bold">100</p>
+                    <p className="text-sm font-bold">∞</p>
                     <p className="mt-0.5 text-[7px] tracking-[0.12em] text-zinc-700">
                       SETUPS
                     </p>
@@ -1622,7 +1677,7 @@ export default function Home() {
                   onClick={() => goTo("profile")}
                   className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-[10px] font-black tracking-[0.14em] text-black transition hover:bg-amber-200 active:scale-[0.98]"
                 >
-                  UNLOCK PREMIUM · $55 / MONTH
+                  UNLOCK PREMIUM · $30 / MONTH
                 </button>
               </div>
             ) : (
