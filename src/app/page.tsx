@@ -473,6 +473,7 @@ function SetupCard({
 export default function Home() {
   const [tab, setTab] = useState<Tab>("home");
 
+
   const [userId, setUserId] =
     useState<string>("");
 
@@ -562,7 +563,7 @@ export default function Home() {
       try {
         const base =
           process.env.NEXT_PUBLIC_NART_API ||
-          "http://127.0.0.1:8787";
+          "https://nart-jnr-1.onrender.com";
 
         const response = await fetch(
           `${base}/api/account?user=${encodeURIComponent(userId)}`,
@@ -601,7 +602,57 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSignals() {
+    async function loadAnalysis() {
+    if (!authUser) {
+      if (!cancelled) {
+        setLiveAnalysis(null);
+      }
+      return;
+    }
+
+    try {
+      const base =
+        process.env.NEXT_PUBLIC_NART_API ||
+        "https://nart-jnr-1.onrender.com";
+
+      const token = await auth.currentUser?.getIdToken();
+
+      if (!token) {
+        throw new Error("Authentication token unavailable");
+      }
+
+      const response = await fetch(
+        `${base}/api/analysis`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        }
+      );
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.error ||
+          `Analysis API returned ${response.status}`
+        );
+      }
+
+      if (!cancelled) {
+        setLiveAnalysis(payload.data);
+      }
+    } catch (error) {
+      console.error("❌ Analysis loading failed:", error);
+
+      if (!cancelled) {
+        setLiveAnalysis(null);
+      }
+    }
+  }
+
+  async function loadSignals() {
       if (!authUser) {
         if (!cancelled) {
           setLiveSetups([]);
@@ -671,6 +722,7 @@ export default function Home() {
       }
     }
 
+    loadAnalysis();
     loadSignals();
 
     return () => {
@@ -1554,7 +1606,7 @@ export default function Home() {
                       try {
                         const base =
                           process.env.NEXT_PUBLIC_NART_API ||
-                          "http://127.0.0.1:8787";
+                          "https://nart-jnr-1.onrender.com";
 
                         const response =
                           await fetch(
