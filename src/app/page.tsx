@@ -482,6 +482,8 @@ export default function Home() {
     useState<{
       id: string;
       email: string;
+      displayName?: string | null;
+      photoURL?: string | null;
     } | null>(null);
 
   const [authError, setAuthError] =
@@ -942,6 +944,22 @@ export default function Home() {
               </button>
             </div>
 
+            <a
+              href={`${process.env.NEXT_PUBLIC_NART_API || "http://127.0.0.1:8787"}/api/auth/google`}
+              className="mb-5 flex w-full items-center justify-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3.5 text-[10px] font-black tracking-[0.12em] text-zinc-200 transition hover:bg-white/[0.06]"
+            >
+              <span className="text-base font-bold">G</span>
+              CONTINUE WITH GOOGLE
+            </a>
+
+            <div className="mb-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/[0.06]" />
+              <span className="text-[8px] font-bold tracking-[0.15em] text-zinc-700">
+                OR
+              </span>
+              <div className="h-px flex-1 bg-white/[0.06]" />
+            </div>
+
             <label className="text-[9px] font-semibold tracking-[0.15em] text-zinc-600">
               EMAIL
             </label>
@@ -1116,9 +1134,23 @@ export default function Home() {
 
               <button
                 onClick={() => goTo("profile")}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.03] text-sm font-bold text-zinc-300 transition hover:bg-white/[0.06]"
+                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/[0.08] bg-white/[0.03] text-sm font-bold text-zinc-300 transition hover:bg-white/[0.06]"
               >
-                N
+                {authUser?.photoURL ? (
+                  <img
+                    src={authUser.photoURL}
+                    alt={authUser.displayName || "Profile"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>
+                    {(authUser?.displayName ||
+                      authUser?.email ||
+                      "N")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </span>
+                )}
               </button>
             </div>
 
