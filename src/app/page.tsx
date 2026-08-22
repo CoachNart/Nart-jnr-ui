@@ -245,12 +245,12 @@ function SetupCard({
               </p>
             </div>
 
-            <div className="text-right">
+            <div className="w-[110px] shrink-0 text-right">
 
-              <div className="flex items-center justify-end gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_9px_rgba(239,68,68,0.65)]" />
+              <div className="flex items-center justify-end gap-1.5 overflow-hidden">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 shadow-[0_0_9px_rgba(239,68,68,0.65)]" />
 
-                <span className="font-mono text-[7px] font-bold tracking-[0.18em] text-red-400">
+                <span className="truncate font-mono text-[7px] font-bold tracking-[0.12em] text-red-400">
                   {setup.status}
                 </span>
               </div>
