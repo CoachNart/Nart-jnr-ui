@@ -108,6 +108,39 @@ const setups = [
   },
 ];
 
+function formatPrice(value: number | string | null | undefined) {
+  if (value == null || value === "" || value === "—") return "—";
+
+  const num = Number(value);
+
+  if (!Number.isFinite(num)) return String(value);
+
+  if (Math.abs(num) >= 1000) {
+    return num.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  if (Math.abs(num) >= 1) {
+    return num.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    });
+  }
+
+  if (Math.abs(num) >= 0.01) {
+    return num.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    });
+  }
+
+  return num.toLocaleString("en-US", {
+    maximumFractionDigits: 8,
+  });
+}
+
 function LiveBadge() {
   return (
     <div className="inline-flex items-center gap-2 border border-red-500/20 bg-red-500/[0.04] px-2.5 py-1">
@@ -1059,18 +1092,18 @@ export default function Home() {
           quality: bias === "bullish" || bias === "bearish"
             ? "A"
             : "—",
-          price: String(item.price ?? "—"),
+          price: formatPrice(item.price),
           entry:
             plan.entry != null
-              ? String(plan.entry)
+              ? formatPrice(plan.entry)
               : "—",
           stop:
             plan.stop != null
-              ? String(plan.stop)
+              ? formatPrice(plan.stop)
               : "—",
           target:
             plan.target != null
-              ? String(plan.target)
+              ? formatPrice(plan.target)
               : "—",
           rr:
             plan.riskReward != null
@@ -1095,7 +1128,7 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#030506] text-zinc-100">
-      <div className="relative z-10 mx-auto min-h-screen max-w-5xl px-4 pb-28 sm:px-6">
+      <div className="relative z-10 mx-auto min-h-screen max-w-6xl px-4 pb-28 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute left-1/2 top-[-180px] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-cyan-400/[0.045] blur-[120px]" />
         <div className="pointer-events-none absolute right-[-180px] top-[30%] h-[300px] w-[300px] rounded-full bg-blue-500/[0.035] blur-[110px]" />
         {/* HEADER */}
@@ -1476,7 +1509,7 @@ export default function Home() {
               Structured opportunities identified by the Nart Jnr engine.
             </p>
 
-            <div className="mt-7 space-y-4">
+            <div className="mt-7 grid grid-cols-1 gap-4 lg:grid-cols-2">
               {displaySetups.map((setup) => (
                 <SetupCard
                   key={setup.pair}
