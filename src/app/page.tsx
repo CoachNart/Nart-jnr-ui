@@ -245,7 +245,7 @@ function SetupCard({
                   event.stopPropagation();
                   onOpen();
                 }}
-                className="mt-3 w-full border border-amber-400/20 bg-amber-400/[0.08] px-3 py-2.5 font-mono text-[8px] font-black tracking-[0.14em] text-amber-300 transition hover:bg-amber-400/[0[...]
+                  className="mt-3 w-full border border-amber-400/20 bg-amber-400/[0.08] px-3 py-2.5 font-mono text-[8px] font-black tracking-[0.14em] text-amber-300 transition hover:bg-amber-400/[0.12]"
               >
                 UNLOCK PREMIUM · $30 / MONTH
               </button>
@@ -1070,7 +1070,7 @@ export default function Home() {
 
               <button
                 onClick={() => goTo("profile")}
-                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/[0.08] bg-white/[0.03] text-sm font-bold text-zinc-300 transition hover:bg-[...]
+                  className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/[0.08] bg-white/[0.03] text-sm font-bold text-zinc-300 transition hover:bg-white/[0.06]"
               >
                 {authUser?.photoURL ? (
                   <img

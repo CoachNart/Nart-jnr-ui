@@ -4,13 +4,14 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD0zh8SNjsYlOJRN73DSr8nssq1J8Wf71A",
-  authDomain: "kitsetups.firebaseapp.com",
-  projectId: "kitsetups",
-  storageBucket: "kitsetups.firebasestorage.app",
-  messagingSenderId: "350160391761",
-  appId: "1:350160391761:web:141cb0356927f7379a3270",
-  measurementId: "G-X2E4TVQ8QR",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "AIzaSyD0zh8SNjsYlOJRN73DSr8nssq1J8Wf71A",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "kitsetups.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "kitsetups",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "kitsetups.appspot.com",
+  messagingSenderId:
+    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "350160391761",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "1:350160391761:web:141cb0356927f7379a3270",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? "G-X2E4TVQ8QR",
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
