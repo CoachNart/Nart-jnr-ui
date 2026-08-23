@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
 import { auth, googleProvider, initAnalytics } from "@/lib/firebase";
 
 type Tab = "home" | "setups" | "analysis" | "profile";
@@ -841,17 +841,36 @@ export default function Home() {
       setAuthError(null);
       setAuthLoading(true);
 
-      const result = await signInWithPopup(auth, googleProvider);
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
 
-      if (result.user) {
-        setAuthUser({
-          id: result.user.uid,
-          email: result.user.email || "",
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL,
-        });
+        if (result.user) {
+          setAuthUser({
+            id: result.user.uid,
+            email: result.user.email || "",
+            displayName: result.user.displayName,
+            photoURL: result.user.photoURL,
+          });
 
-        setUserId(result.user.uid);
+          setUserId(result.user.uid);
+        }
+      } catch (error: any) {
+        console.error("❌ Firebase Google sign-in failed:", error);
+
+        const code = error?.code || "";
+
+        const shouldRedirect =
+          code === "auth/popup-blocked" ||
+          code === "auth/popup-closed-by-user" ||
+          code === "auth/cancelled-popup-request" ||
+          code === "auth/operation-not-supported-in-this-environment";
+
+        if (shouldRedirect) {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        }
+
+        throw error;
       }
     } catch (error) {
       console.error("❌ Firebase Google sign-in failed:", error);
