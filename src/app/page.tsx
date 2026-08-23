@@ -550,6 +550,12 @@ export default function Home() {
 
 
 
+  const [modal, setModal] = useState<{
+    title: string;
+    message: string;
+    success?: boolean;
+  } | null>(null);
+
   const [authLoading, setAuthLoading] =
     useState(true);
 
@@ -1707,7 +1713,10 @@ export default function Home() {
                         input?.value.trim();
 
                       if (!txHash) {
-                        alert("Paste your transaction hash first.");
+                        setModal({
+                            title: "TRANSACTION HASH REQUIRED",
+                            message: "Paste your BNB Chain transaction hash so KitSetups can verify your payment.",
+                          });
                         return;
                       }
 
@@ -1742,17 +1751,21 @@ export default function Home() {
                           );
                         }
 
-                        alert(
-                          "✅ Payment verified. Premium activated for 30 days."
-                        );
+                        setModal({
+                          title: "PAYMENT VERIFIED",
+                          message: "Premium has been activated for 30 days. Your KitSetups account is now unlocked.",
+                          success: true,
+                        });
 
                         window.location.reload();
                       } catch (error) {
-                        alert(
-                          error instanceof Error
-                            ? error.message
-                            : "Unable to verify payment."
-                        );
+                        setModal({
+                          title: "PAYMENT VERIFICATION FAILED",
+                          message:
+                            error instanceof Error
+                              ? error.message
+                              : "Unable to verify payment. Please check the transaction hash and try again.",
+                        });
                       }
                     }}
                     className="mt-2.5 w-full rounded-xl bg-cyan-400 px-4 py-2.5 text-[8px] font-black tracking-[0.16em] text-black transition hover:bg-cyan-300 active:scale-[0.98]"
@@ -1787,7 +1800,10 @@ export default function Home() {
 
                 <button
                   onClick={() => {
-                    alert("Developer API dashboard coming next.");
+                    setModal({
+                      title: "DEVELOPER API",
+                      message: "The KitSetups Developer API dashboard is being prepared. API access will be available here soon.",
+                    });
                   }}
                   className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2 text-[8px] font-bold tracking-[0.12em] text-zinc-400 transition hover:bg-white/[0.06] hover:text-zinc-200"
                 >
@@ -2012,6 +2028,70 @@ export default function Home() {
             )}
 
           </section>
+        )}
+
+        {/* APP MODAL */}
+        {modal && (
+          <div
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 px-5 backdrop-blur-md"
+            onClick={() => setModal(null)}
+          >
+            <div
+              className="w-full max-w-sm rounded-[26px] border border-white/[0.08] bg-[#090b0d] p-5 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                    modal.success
+                      ? "border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-300"
+                      : "border-cyan-400/20 bg-cyan-400/[0.07] text-cyan-300"
+                  }`}>
+                    {modal.success ? "✓" : "◆"}
+                  </div>
+
+                  <div>
+                    <p className="font-mono text-[8px] font-bold tracking-[0.2em] text-zinc-600">
+                      KITSETUPS
+                    </p>
+                    <h3 className="mt-1 text-sm font-bold text-white">
+                      {modal.title}
+                    </h3>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setModal(null)}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-lg text-zinc-600 hover:bg-white/[0.05] hover:text-zinc-300"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-white/[0.05] bg-white/[0.02] p-4">
+                <p className="text-xs leading-5 text-zinc-400">
+                  {modal.message}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const reload = modal.success;
+                  setModal(null);
+                  if (reload) window.location.reload();
+                }}
+                className={`mt-4 w-full rounded-xl px-4 py-3 text-[8px] font-black tracking-[0.16em] text-black ${
+                  modal.success
+                    ? "bg-emerald-400 hover:bg-emerald-300"
+                    : "bg-cyan-400 hover:bg-cyan-300"
+                }`}
+              >
+                {modal.success ? "CONTINUE TO KITSETUPS" : "GOT IT"}
+              </button>
+            </div>
+          </div>
         )}
 
         {/* BOTTOM NAV */}
