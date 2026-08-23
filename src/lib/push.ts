@@ -6,7 +6,9 @@ function urlBase64ToUint8Array(base64String: string) {
 
   const rawData = window.atob(base64);
 
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+  return Uint8Array.from(
+    [...rawData].map((char) => char.charCodeAt(0))
+  );
 }
 
 export async function enablePushNotifications(userId: string) {
@@ -15,7 +17,9 @@ export async function enablePushNotifications(userId: string) {
   }
 
   if (!("Notification" in window)) {
-    throw new Error("Push notifications are not supported by this browser.");
+    throw new Error(
+      "Push notifications are not supported by this browser."
+    );
   }
 
   if (!("serviceWorker" in navigator)) {
@@ -34,45 +38,65 @@ export async function enablePushNotifications(userId: string) {
     throw new Error("Notification permission was denied.");
   }
 
-  const registration = await navigator.serviceWorker.register("/sw.js");
+  const registration =
+    await navigator.serviceWorker.register("/sw.js");
 
   await navigator.serviceWorker.ready;
 
-  let subscription = await registration.pushManager.getSubscription();
+  let subscription =
+    await registration.pushManager.getSubscription();
 
   if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidKey),
-    });
+    subscription =
+      await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey:
+          urlBase64ToUint8Array(vapidKey),
+      });
   }
 
-  const response = await fetch("/api/push/subscribe", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      userId,
-      subscription: subscription.toJSON(),
-    }),
-  });
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/push/subscribe`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId,
+        subscription: subscription.toJSON(),
+      }),
+    }
+  );
 
   if (!response.ok) {
-    throw new Error("Failed to save push subscription.");
+    const data = await response.json().catch(() => null);
+
+    throw new Error(
+      data?.error || "Failed to save push subscription."
+    );
   }
 
   return subscription;
 }
 
-export async function disablePushNotifications(userId: string) {
-  const registration = await navigator.serviceWorker.getRegistration("/");
+export async function disablePushNotifications(
+  userId: string
+) {
+  const registration =
+    await navigator.serviceWorker.getRegistration("/");
 
-  const subscription = await registration?.pushManager.getSubscription();
+  const subscription =
+    await registration?.pushManager.getSubscription();
 
-  if (subscription) {
-    await fetch("/api/push/unsubscribe", {
+  if (!subscription) return;
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/push/unsubscribe`,
+    {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
@@ -80,8 +104,12 @@ export async function disablePushNotifications(userId: string) {
         userId,
         endpoint: subscription.endpoint,
       }),
-    });
+    }
+  );
 
-    await subscription.unsubscribe();
+  if (!response.ok) {
+    throw new Error("Failed to remove push subscription.");
   }
+
+  await subscription.unsubscribe();
 }
