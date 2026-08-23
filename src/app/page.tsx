@@ -187,11 +187,13 @@ function Metric({
 function SetupCard({
   setup,
   onOpen,
+  signalLocked = false,
 }: {
   setup: (typeof setups)[number];
   onOpen: () => void;
+  signalLocked?: boolean;
 }) {
-  const locked = setup.premium;
+  const locked = setup.premium || signalLocked;
   const bullish = setup.side === "LONG";
 
   return (
@@ -219,6 +221,36 @@ function SetupCard({
         />
 
         <div className="p-5">
+
+          {signalLocked && (
+            <div className="mb-5 border border-amber-400/15 bg-amber-400/[0.04] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[8px] font-bold tracking-[0.18em] text-amber-300">
+                    FREE ACCESS ENDED
+                  </p>
+                  <p className="mt-1 text-[10px] leading-5 text-zinc-500">
+                    Your 3-day trial has ended. Execution levels are locked.
+                  </p>
+                </div>
+
+                <span className="shrink-0 text-[9px] font-black text-amber-300">
+                  ◆
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpen();
+                }}
+                className="mt-3 w-full border border-amber-400/20 bg-amber-400/[0.08] px-3 py-2.5 font-mono text-[8px] font-black tracking-[0.14em] text-amber-300 transition hover:bg-amber-400/[0.12]"
+              >
+                UNLOCK PREMIUM · $30 / MONTH
+              </button>
+            </div>
+          )}
 
           {/* HEADER */}
           <div className="flex items-start justify-between">
@@ -336,7 +368,7 @@ function SetupCard({
                     </div>
 
                     <p className="font-mono text-lg font-bold text-white">
-                      ${setup.entry}
+                      {signalLocked ? "••••••" : `$${setup.entry}`}
                     </p>
 
                   </div>
@@ -363,7 +395,7 @@ function SetupCard({
                     </div>
 
                     <p className="font-mono text-lg font-bold text-zinc-300">
-                      ${setup.stop}
+                      {signalLocked ? "••••••" : `$${setup.stop}`}
                     </p>
 
                   </div>
@@ -390,7 +422,7 @@ function SetupCard({
                     </div>
 
                     <p className="font-mono text-lg font-bold text-emerald-300">
-                      ${setup.target}
+                      {signalLocked ? "••••••" : `$${setup.target}`}
                     </p>
 
                   </div>
@@ -413,7 +445,7 @@ function SetupCard({
               </p>
 
               <p className="mt-2 font-mono text-2xl font-bold text-cyan-300">
-                {setup.rr}
+                {signalLocked ? "••••" : setup.rr}
               </p>
 
             </div>
@@ -471,7 +503,16 @@ function SetupCard({
 }
 
 export default function Home() {
-  const [tab, setTab] = useState<Tab>("home");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "home";
+    const saved = sessionStorage.getItem("kitsetups-tab");
+    return saved === "home" ||
+      saved === "setups" ||
+      saved === "analysis" ||
+      saved === "profile"
+      ? saved
+      : "home";
+  });
 
 
   const [userId, setUserId] =
@@ -482,6 +523,12 @@ export default function Home() {
 
   const [liveSetups, setLiveSetups] =
     useState<NartSetup[]>([]);
+
+  const [signalLocked, setSignalLocked] =
+    useState(false);
+
+  const [trialEndsAt, setTrialEndsAt] =
+    useState<string | null>(null);
 
 
   const [apiLoading, setApiLoading] =
@@ -616,6 +663,12 @@ export default function Home() {
         "https://nart-jnr-1.onrender.com";
 
       const token = await auth.currentUser?.getIdToken();
+      console.log("KITSETUPS AUTH DEBUG:", {
+        uid: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+      });
 
       if (!token) {
         throw new Error("Authentication token unavailable");
@@ -670,6 +723,12 @@ export default function Home() {
           "https://nart-jnr-1.onrender.com";
 
         const token = await auth.currentUser?.getIdToken();
+      console.log("KITSETUPS AUTH DEBUG:", {
+        uid: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+      });
 
         if (!token) {
           throw new Error("Authentication token unavailable");
@@ -698,8 +757,16 @@ export default function Home() {
           ? payload.data.signals
           : [];
 
+        const locked = payload.data?.locked === true;
+        const trialEnd =
+          typeof payload.data?.trialEndsAt === "string"
+            ? payload.data.trialEndsAt
+            : null;
+
         if (!cancelled) {
           setLiveSetups(signals);
+          setSignalLocked(locked);
+          setTrialEndsAt(trialEnd);
         }
       } catch (error) {
         console.error(
@@ -709,6 +776,8 @@ export default function Home() {
 
         if (!cancelled) {
           setLiveSetups([]);
+          setSignalLocked(false);
+          setTrialEndsAt(null);
           setApiError(
             error instanceof Error
               ? error.message
@@ -776,6 +845,27 @@ export default function Home() {
   const [selectedSetup, setSelectedSetup] =
     useState<(typeof setups)[number] | null>(null);
 
+  // Keep the active section when the browser reloads.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const savedTab = window.sessionStorage.getItem("kitsetups-tab");
+
+    if (
+      savedTab === "home" ||
+      savedTab === "setups" ||
+      savedTab === "analysis" ||
+      savedTab === "profile"
+    ) {
+      setTab(savedTab as Tab);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem("kitsetups-tab", tab);
+  }, [tab]);
+
 
   if (authLoading) {
     return (
@@ -841,6 +931,9 @@ export default function Home() {
   const goTo = (next: Tab) => {
     setSelectedSetup(null);
     setTab(next);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("kitsetups-tab", next);
+    }
   };
 
   const displaySetups = liveSetups.map((item) => {
@@ -906,7 +999,7 @@ export default function Home() {
         <div className="pointer-events-none absolute left-1/2 top-[-180px] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-cyan-400/[0.045] blur-[120px]" />
         <div className="pointer-events-none absolute right-[-180px] top-[30%] h-[300px] w-[300px] rounded-full bg-blue-500/[0.035] blur-[110px]" />
         {/* HEADER */}
-        <header className="flex items-center justify-between border-b border-white/[0.05] py-5">
+        <header className="sticky top-0 z-50 flex items-center justify-between border-b border-white/[0.05] bg-[#030506]/95 py-5 backdrop-blur-xl">
           <button onClick={() => goTo("home")} className="text-left">
             <img
               src="https://www.t3kit.xyz/assets/images/logo.webp"
@@ -1246,6 +1339,7 @@ export default function Home() {
                 <SetupCard
                   key={setup.pair}
                   setup={setup}
+                  signalLocked={signalLocked}
                   onOpen={() => setSelectedSetup(setup)}
                 />
               ))}
@@ -1403,8 +1497,23 @@ export default function Home() {
             {/* PROFILE HEADER */}
             <div className="mb-6 flex items-center gap-4">
 
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] text-xl font-black text-cyan-300">
-                N
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] text-xl font-black text-cyan-300">
+                {authUser?.photoURL ? (
+                  <img
+                    src={authUser.photoURL}
+                    alt={authUser.displayName || "Profile"}
+                    className="h-full w-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span>
+                    {(authUser?.displayName ||
+                      authUser?.email ||
+                      "N")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </span>
+                )}
               </div>
 
               <div className="min-w-0 flex-1">
