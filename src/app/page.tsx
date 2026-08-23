@@ -537,14 +537,15 @@ export default function Home() {
   const [apiError, setApiError] =
     useState<string | null>(null);
 
-  const [account, setAccount] =
-    useState<{
-      plan: string;
-      planName: string;
-      monthlyLimit: number;
-      monthlyUsage: number;
-      remaining: number;
-    } | null>(null);
+  const [account, setAccount] = useState<{
+    plan: string;
+    planName: string;
+    trialActive?: boolean;
+    trialStartedAt?: string | null;
+    trialEndsAt?: string | null;
+    trialRemainingMs?: number | null;
+    accessLocked?: boolean;
+  } | null>(null);
 
 
 
@@ -1565,9 +1566,13 @@ export default function Home() {
                     </p>
 
                     <p className="mt-1 font-mono text-sm font-bold text-cyan-300">
-                      {account
-                        ? account.remaining
-                        : "—"}
+                      {account?.plan === "premium"
+                        ? "UNLIMITED"
+                        : account?.accessLocked
+                          ? "LOCKED"
+                          : account?.trialActive
+                            ? "ACTIVE"
+                            : "—"}
                     </p>
                   </div>
 
@@ -1581,35 +1586,27 @@ export default function Home() {
                     </span>
 
                     <span className="font-mono text-[9px] text-zinc-500">
-                      {account
-                        ? account.monthlyLimit === null
-                          ? `${account.monthlyUsage} · UNLIMITED`
-                          : `${account.monthlyUsage} / ${account.monthlyLimit}`
-                        : "SYNCING..."}
+                      {account?.plan === "premium"
+                        ? "UNLIMITED ACCESS"
+                        : account?.trialActive
+                          ? "3-DAY FREE TRIAL"
+                          : account?.accessLocked
+                            ? "TRIAL ENDED"
+                            : "SYNCING..."}
                     </span>
                   </div>
 
-                  {account?.monthlyLimit === null ? (
-                    <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                      <div className="h-full w-full rounded-full bg-cyan-400/60" />
-                    </div>
-                  ) : (
-                    <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                      <div
-                        className="h-full rounded-full bg-cyan-400 transition-all duration-500"
-                        style={{
-                          width: account
-                            ? `${Math.min(
-                                100,
-                                (account.monthlyUsage /
-                                  Math.max(account.monthlyLimit, 1)) *
-                                  100
-                              )}%`
-                            : "0%",
-                        }}
-                      />
-                    </div>
-                  )}
+                  <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        account?.accessLocked
+                          ? "w-0 bg-red-400/60"
+                          : account?.plan === "premium"
+                            ? "w-full bg-amber-400/70"
+                            : "w-full bg-cyan-400/60"
+                      }`}
+                    />
+                  </div>
 
                 </div>
 
