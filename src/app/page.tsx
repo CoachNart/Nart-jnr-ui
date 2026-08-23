@@ -994,12 +994,12 @@ export default function Home() {
 
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#030506] text-zinc-100">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#030506] pt-[73px] text-zinc-100">
       <div className="relative z-10 mx-auto min-h-screen max-w-6xl px-4 pb-28 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute left-1/2 top-[-180px] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-cyan-400/[0.045] blur-[120px]" />
         <div className="pointer-events-none absolute right-[-180px] top-[30%] h-[300px] w-[300px] rounded-full bg-blue-500/[0.035] blur-[110px]" />
         {/* HEADER */}
-        <header className="sticky top-0 z-[100] flex w-full items-center justify-between border-b border-white/[0.05] bg-[#030506]/95 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="fixed left-0 right-0 top-0 z-[100] flex w-full items-center justify-between border-b border-white/[0.05] bg-[#030506]/95 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
           <button onClick={() => goTo("home")} className="text-left">
             <img
               src="https://www.t3kit.xyz/assets/images/logo.webp"
