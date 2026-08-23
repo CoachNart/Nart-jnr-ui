@@ -1,8 +1,8 @@
 "use client";
 
+import { useUser, useClerk, useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
-import { auth, googleProvider, initAnalytics } from "@/lib/firebase";
+import { initAnalytics } from "@/lib/firebase";
 
 type Tab = "home" | "setups" | "analysis" | "profile";
 
@@ -503,6 +503,9 @@ function SetupCard({
 }
 
 export default function Home() {
+  const { user, isLoaded } = useUser();
+  const { signOut, openSignIn } = useClerk();
+  const { getToken } = useAuth();
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "home";
     const saved = sessionStorage.getItem("kitsetups-tab");
@@ -556,30 +559,26 @@ export default function Home() {
     success?: boolean;
   } | null>(null);
 
-  const [authLoading, setAuthLoading] =
-    useState(true);
+  const authLoading = !isLoaded;
+  const [authUser, setAuthUser] = useState<{
+    id: string;
+    email: string;
+    displayName?: string | null;
+    photoURL?: string | null;
+  } | null>(null);
 
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const [authUser, setAuthUser] =
-    useState<{
-      id: string;
-      email: string;
-      displayName?: string | null;
-      photoURL?: string | null;
-    } | null>(null);
-
-  const [authError, setAuthError] =
-    useState<string | null>(null);
-
-  // Helper: getIdToken with a short timeout so UI doesn't hang during token refresh
   async function getIdTokenWithTimeout(timeoutMs = 2500) {
     try {
-      const promise = auth.currentUser?.getIdToken();
+      const promise = getToken();
       if (!promise) return null as string | null;
 
       const result = await Promise.race([
         promise,
-        new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+        new Promise((resolve) =>
+          setTimeout(() => resolve(null), timeoutMs)
+        ),
       ]);
 
       return typeof result === "string" ? result : null;
@@ -590,54 +589,28 @@ export default function Home() {
   }
 
   useEffect(() => {
-    let cancelled = false;
-
-    // Never let Firebase Auth block the application loader.
-    setAuthLoading(false);
+    if (!isLoaded) return;
 
     initAnalytics().catch((error) => {
       console.error("❌ Firebase Analytics failed:", error);
     });
 
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        if (cancelled) return;
+    if (user) {
+      const clerkUser = {
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress || "",
+        displayName: user.fullName || user.username || null,
+        photoURL: user.imageUrl || null,
+      };
 
-        if (user) {
-          const firebaseUser = {
-            id: user.uid,
-            email: user.email || "",
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-          };
-
-          setAuthUser(firebaseUser);
-          setUserId(user.uid);
-        } else {
-          setAuthUser(null);
-          setUserId("");
-        }
-      },
-      (error) => {
-        if (cancelled) return;
-
-        console.error("❌ Firebase Auth state listener failed:", error);
-        setAuthUser(null);
-        setUserId("");
-        setAuthError(
-          error instanceof Error
-            ? error.message
-            : "Unable to connect to Firebase Authentication."
-        );
-      }
-    );
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
+      setAuthUser(clerkUser);
+      setUserId(user.id);
+      setAuthError(null);
+    } else {
+      setAuthUser(null);
+      setUserId("");
+    }
+  }, [user, isLoaded]);
 
   useEffect(() => {
     let cancelled = false;
@@ -725,8 +698,8 @@ export default function Home() {
         if (userId) headers["X-Nart-User"] = userId;
 
         console.log("KITSETUPS AUTH DEBUG:", {
-          uid: auth.currentUser?.uid,
-          email: auth.currentUser?.email,
+          uid: user?.id,
+          email: user?.primaryEmailAddress?.emailAddress,
           hasToken: !!token,
           tokenLength: token?.length || 0,
         });
@@ -783,8 +756,8 @@ export default function Home() {
         if (userId) headers["X-Nart-User"] = userId; // legacy fallback when token unavailable
 
         console.log("KITSETUPS AUTH DEBUG:", {
-          uid: auth.currentUser?.uid,
-          email: auth.currentUser?.email,
+          uid: user?.id,
+          email: user?.primaryEmailAddress?.emailAddress,
           hasToken: !!token,
           tokenLength: token?.length || 0,
         });
@@ -855,44 +828,23 @@ export default function Home() {
   async function loginWithGoogle() {
     try {
       setAuthError(null);
-      setAuthLoading(true);
-
-      try {
-        await signInWithRedirect(auth, googleProvider);
-      } catch (error: any) {
-        console.error("❌ Firebase Google sign-in failed:", error);
-
-        const code = error?.code || "";
-
-        const shouldRedirect =
-          code === "auth/popup-blocked" ||
-          code === "auth/popup-closed-by-user" ||
-          code === "auth/cancelled-popup-request" ||
-          code === "auth/operation-not-supported-in-this-environment";
-
-        if (shouldRedirect) {
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        }
-
-        throw error;
-      }
+      await openSignIn({
+        forceRedirectUrl: window.location.href,
+      });
     } catch (error) {
-      console.error("❌ Firebase Google sign-in failed:", error);
+      console.error("❌ Clerk sign-in failed:", error);
 
       if (error instanceof Error) {
         setAuthError(error.message);
       } else {
-        setAuthError("Google sign-in failed. Please try again.");
+        setAuthError("Sign-in failed. Please try again.");
       }
-    } finally {
-      setAuthLoading(false);
     }
   }
 
   async function logout() {
     try {
-      await signOut(auth);
+      await signOut();
     } catch (error) {
       console.error("❌ Firebase logout failed:", error);
     }
