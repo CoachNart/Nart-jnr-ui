@@ -619,9 +619,18 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           "https://nart-jnr-1.onrender.com";
 
+        const token = await auth.currentUser?.getIdToken();
+
+        if (!token) {
+          throw new Error("Authentication token unavailable");
+        }
+
         const response = await fetch(
-          `${base}/api/account?user=${encodeURIComponent(userId)}`,
+          `${base}/api/account`,
           {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
             cache: "no-store",
           }
         );
