@@ -56,7 +56,7 @@ export async function enablePushNotifications(userId: string) {
   }
 
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/push/subscribe`,
+    `${process.env.NEXT_PUBLIC_NART_API}/api/push/subscribe`,
     {
       method: "POST",
       credentials: "include",
@@ -93,7 +93,7 @@ export async function disablePushNotifications(
   if (!subscription) return;
 
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/push/unsubscribe`,
+    `${process.env.NEXT_PUBLIC_NART_API}/api/push/unsubscribe`,
     {
       method: "POST",
       credentials: "include",
