@@ -842,18 +842,7 @@ export default function Home() {
       setAuthLoading(true);
 
       try {
-        const result = await signInWithPopup(auth, googleProvider);
-
-        if (result.user) {
-          setAuthUser({
-            id: result.user.uid,
-            email: result.user.email || "",
-            displayName: result.user.displayName,
-            photoURL: result.user.photoURL,
-          });
-
-          setUserId(result.user.uid);
-        }
+        await signInWithRedirect(auth, googleProvider);
       } catch (error: any) {
         console.error("❌ Firebase Google sign-in failed:", error);
 
