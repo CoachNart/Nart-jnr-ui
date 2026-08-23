@@ -592,30 +592,46 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
 
+    // Never let Firebase Auth block the application loader.
+    setAuthLoading(false);
+
     initAnalytics().catch((error) => {
       console.error("❌ Firebase Analytics failed:", error);
     });
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (cancelled) return;
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (user) => {
+        if (cancelled) return;
 
-      if (user) {
-        const firebaseUser = {
-          id: user.uid,
-          email: user.email || "",
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-        };
+        if (user) {
+          const firebaseUser = {
+            id: user.uid,
+            email: user.email || "",
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+          };
 
-        setAuthUser(firebaseUser);
-        setUserId(user.uid);
-      } else {
+          setAuthUser(firebaseUser);
+          setUserId(user.uid);
+        } else {
+          setAuthUser(null);
+          setUserId("");
+        }
+      },
+      (error) => {
+        if (cancelled) return;
+
+        console.error("❌ Firebase Auth state listener failed:", error);
         setAuthUser(null);
         setUserId("");
+        setAuthError(
+          error instanceof Error
+            ? error.message
+            : "Unable to connect to Firebase Authentication."
+        );
       }
-
-      setAuthLoading(false);
-    });
+    );
 
     return () => {
       cancelled = true;
