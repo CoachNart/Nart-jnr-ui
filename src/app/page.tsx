@@ -283,12 +283,12 @@ function SetupCard({
           )}
 
           {/* HEADER */}
-          <div className="flex items-start justify-between">
+          <div className="flex min-w-0 items-start justify-between gap-3">
 
             <div>
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-2">
 
-                <h3 className="font-mono text-xl font-bold tracking-tight text-white">
+                <h3 className="truncate font-mono text-lg font-bold tracking-tight text-white">
                   {setup.pair}
                 </h3>
 
@@ -304,64 +304,64 @@ function SetupCard({
 
               </div>
 
-              <p className="mt-2 font-mono text-[8px] tracking-[0.16em] text-zinc-600">
+              <p className="mt-1.5 font-mono text-[7px] tracking-[0.12em] text-zinc-600">
                 {setup.timeframe !== "LIVE ENGINE" ? setup.timeframe : "LIVE ENGINE"}
               </p>
             </div>
 
-            <div className="w-[110px] shrink-0 text-right">
+            <div className="w-[88px] shrink-0 text-right">
 
-              <div className="flex items-center justify-end gap-1.5 overflow-hidden">
+              <div className="flex min-w-0 items-center justify-end gap-1 overflow-hidden">
                 <span
                   className={
                     setup.status === "ACTIVE"
-                      ? "h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 shadow-[0_0_9px_rgba(239,68,68,0.65)]"
+                      ? "h-1 w-1 shrink-0 rounded-full bg-red-500 shadow-[0_0_9px_rgba(239,68,68,0.65)]"
                       : setup.status === "READY"
-                        ? "h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_9px_rgba(34,211,238,0.65)]"
+                        ? "h-1 w-1 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_9px_rgba(34,211,238,0.65)]"
                         : setup.status === "ARMED"
-                          ? "h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 shadow-[0_0_9px_rgba(251,191,36,0.55)]"
+                          ? "h-1 w-1 shrink-0 rounded-full bg-amber-400 shadow-[0_0_9px_rgba(251,191,36,0.55)]"
                           : setup.status === "DEVELOPING"
-                            ? "h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400"
+                            ? "h-1 w-1 shrink-0 rounded-full bg-zinc-400"
                             : setup.status === "TARGET_HIT" ||
                                 setup.status === "TP_HIT"
-                              ? "h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"
+                              ? "h-1 w-1 shrink-0 rounded-full bg-emerald-400"
                               : setup.status === "STOP_HIT"
-                                ? "h-1.5 w-1.5 shrink-0 rounded-full bg-red-600"
-                                : "h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-500"
+                                ? "h-1 w-1 shrink-0 rounded-full bg-red-600"
+                                : "h-1 w-1 shrink-0 rounded-full bg-zinc-500"
                   }
                 />
 
                 <span
                   className={
                     setup.status === "ACTIVE"
-                      ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-red-400"
+                      ? "truncate font-mono text-[6px] font-bold tracking-[0.1em] text-red-400"
                       : setup.status === "READY"
-                        ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-cyan-400"
+                        ? "truncate font-mono text-[6px] font-bold tracking-[0.1em] text-cyan-400"
                         : setup.status === "ARMED"
-                          ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-amber-300"
+                          ? "truncate font-mono text-[6px] font-bold tracking-[0.1em] text-amber-300"
                           : setup.status === "DEVELOPING"
-                            ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-zinc-400"
+                            ? "truncate font-mono text-[6px] font-bold tracking-[0.1em] text-zinc-400"
                             : setup.status === "TARGET_HIT" ||
                                 setup.status === "TP_HIT"
-                              ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-emerald-400"
+                              ? "truncate font-mono text-[6px] font-bold tracking-[0.1em] text-emerald-400"
                               : setup.status === "STOP_HIT"
-                                ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-red-500"
-                                : "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-zinc-500"
+                                ? "truncate font-mono text-[6px] font-bold tracking-[0.1em] text-red-500"
+                                : "truncate font-mono text-[6px] font-bold tracking-[0.1em] text-zinc-500"
                   }
                 >
                   {setup.status || "UNKNOWN"}
                 </span>
               </div>
 
-              <p className="mt-3 font-mono text-[7px] tracking-[0.16em] text-zinc-600">
+              <p className="mt-2 font-mono text-[6px] tracking-[0.12em] text-zinc-600">
                 SETUP GRADE
               </p>
 
-              <p className="font-mono text-sm font-bold text-cyan-300">
+              <p className="font-mono text-xs font-bold text-cyan-300">
                 {setup.grade || setup.quality || "WATCH"}
               </p>
 
-              <p className="mt-1 font-mono text-[7px] font-bold tracking-[0.12em] text-zinc-600">
+              <p className="mt-1 font-mono text-[6px] font-bold tracking-[0.1em] text-zinc-600">
                 {setup.score != null ? `${setup.score}/100` : "—"}
               </p>
 
@@ -1542,7 +1542,7 @@ export default function Home() {
                           key={index}
                           className="flex gap-3 rounded-2xl border border-white/[0.05] bg-black/20 p-3.5"
                         >
-                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
+                          <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
 
                           <p className="text-sm leading-6 text-zinc-400">
                             {reason}
@@ -1733,7 +1733,7 @@ export default function Home() {
 
                 <div className="flex items-center justify-between gap-3">
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
 
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-400/15 bg-amber-400/[0.07] text-sm text-amber-300">
                       ◆
@@ -1890,7 +1890,7 @@ export default function Home() {
               {/* DEVELOPER */}
               <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
 
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2">
 
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] text-sm text-zinc-400">
                     &lt;/&gt;
@@ -2151,7 +2151,7 @@ export default function Home() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
                     modal.success
                       ? "border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-300"
