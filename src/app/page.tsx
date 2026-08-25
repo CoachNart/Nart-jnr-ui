@@ -610,20 +610,6 @@ export default function Home() {
   const [apiError, setApiError] =
     useState<string | null>(null);
 
-  const [signalDebug, setSignalDebug] = useState<{
-    status: number | null;
-    message: string;
-    count: number;
-    symbols: string[];
-    payload: unknown;
-  }>({
-    status: null,
-    message: "Waiting for signal request...",
-    count: 0,
-    symbols: [],
-    payload: null,
-  });
-
   const [showT3KitPromo, setShowT3KitPromo] = useState(false);
 
   useEffect(() => {
@@ -828,25 +814,7 @@ export default function Home() {
 
         const payload = await response.json();
 
-        const diagnosticSignals = Array.isArray(payload?.data?.signals)
-          ? payload.data.signals
-          : [];
-
         if (!cancelled) {
-          setSignalDebug({
-            status: response.status,
-            message:
-              payload?.error ||
-              payload?.message ||
-              (response.ok
-                ? "Signal request completed"
-                : `Signal request failed with HTTP ${response.status}`),
-            count: diagnosticSignals.length,
-            symbols: diagnosticSignals
-              .map((signal: any) => signal?.symbol)
-              .filter(Boolean),
-            payload,
-          });
         }
 
         if (!response.ok || !payload.ok) {
@@ -878,13 +846,6 @@ export default function Home() {
         if (!cancelled) {
           setLiveSetups([]);
           setApiLoading(false);
-          setSignalDebug({
-            status: null,
-            message: "No authenticated Firebase user",
-            count: 0,
-            symbols: [],
-            payload: null,
-          });
         }
         return;
       }
@@ -911,13 +872,6 @@ export default function Home() {
         }
 
         if (!cancelled) {
-          setSignalDebug({
-            status: null,
-            message: `Requesting ${base}/api/signals`,
-            count: 0,
-            symbols: [],
-            payload: null,
-          });
         }
 
         const response = await fetch(`${base}/api/signals`, {
@@ -970,10 +924,6 @@ export default function Home() {
 
           setApiError(message);
 
-          setSignalDebug((current) => ({
-            ...current,
-            message,
-          }));
         }
       } finally {
         if (!cancelled) {
@@ -1559,77 +1509,6 @@ export default function Home() {
         {/* SETUPS */}
         {tab === "setups" && !selectedSetup && (
           <>
-            <div className="mb-5 rounded-2xl border border-yellow-400/20 bg-yellow-400/[0.04] p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-[9px] font-black tracking-[0.18em] text-yellow-300">
-                SIGNAL DIAGNOSTIC
-              </p>
-
-              <span
-                className={`text-[9px] font-bold ${
-                  signalDebug.status === 200
-                    ? "text-emerald-400"
-                    : signalDebug.status
-                      ? "text-red-400"
-                      : "text-zinc-500"
-                }`}
-              >
-                {signalDebug.status
-                  ? `HTTP ${signalDebug.status}`
-                  : "WAITING"}
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-2 text-[10px] text-zinc-400">
-              <div className="flex justify-between gap-4">
-                <span>User</span>
-                <span className="max-w-[220px] truncate font-mono text-zinc-300">
-                  {authUser?.id || userId || "NONE"}
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span>Signals returned</span>
-                <span className="font-bold text-white">
-                  {signalDebug.count}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-zinc-600">Symbols</span>
-                <p className="mt-1 break-words font-mono text-cyan-300">
-                  {signalDebug.symbols.length
-                    ? signalDebug.symbols.join(", ")
-                    : "None"}
-                </p>
-              </div>
-
-              <div>
-                <span className="text-zinc-600">Message</span>
-                <p className="mt-1 break-words text-zinc-300">
-                  {signalDebug.message}
-                </p>
-              </div>
-
-              {apiError && (
-                <div className="rounded-lg bg-red-400/[0.08] p-2">
-                  <span className="text-red-300">
-                    API ERROR: {apiError}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <details className="mt-4">
-              <summary className="cursor-pointer text-[9px] font-bold text-zinc-500">
-                RAW API RESPONSE
-              </summary>
-
-              <pre className="mt-2 max-h-80 overflow-auto rounded-xl bg-black/30 p-3 text-[8px] leading-4 text-zinc-500">
-                {JSON.stringify(signalDebug.payload, null, 2)}
-              </pre>
-            </details>
-          </div>
           <section className="py-8">
             <p className="text-xs tracking-[0.2em] text-zinc-600">
               MARKET
