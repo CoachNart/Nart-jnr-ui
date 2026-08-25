@@ -2300,6 +2300,44 @@ export default function Home() {
           </section>
         )}
 
+        {/* T3KIT FLOATING PROMO */}
+        {showT3KitPromo && (
+          <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[9998] flex justify-center px-4">
+            <div className="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border border-orange-400/20 bg-[#090b0d]/95 p-3 shadow-2xl backdrop-blur-xl">
+
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-orange-400/15 bg-orange-400/[0.06]">
+                <img
+                  src="https://www.t3kit.xyz/assets/images/logo.webp"
+                  alt="T3Kit"
+                  className="h-7 w-7 object-contain"
+                />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-[7px] font-bold tracking-[0.18em] text-orange-400">
+                  T3KIT
+                </p>
+                <p className="mt-1 text-xs font-bold text-white">
+                  Your gateway into Web3.
+                </p>
+                <p className="mt-0.5 text-[9px] text-zinc-500">
+                  Learn. Build. Find opportunities.
+                </p>
+              </div>
+
+              <a
+                href="https://www.t3kit.xyz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 rounded-xl bg-orange-400 px-3 py-2 text-[8px] font-black tracking-[0.12em] text-black transition hover:bg-orange-300"
+              >
+                EXPLORE
+              </a>
+
+            </div>
+          </div>
+        )}
+
         {/* APP MODAL */}
         {modal && (
           <div
