@@ -561,41 +561,7 @@ function SetupCard({
   );
 }
 
-{/* T3KIT FLOATING PROMO */}
-<a
-  href="https://t3kit.xyz"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="group fixed bottom-5 left-1/2 z-50 w-[calc(100%-24px)] max-w-[380px] -translate-x-1/2 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080808]/95 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.14]"
->
-  <div className="flex items-center gap-3">
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]">
-      <img
-        src="https://www.t3kit.xyz/assets/images/logo.webp"
-        alt="T3Kit"
-        className="h-7 w-7 object-contain"
-      />
-    </div>
 
-    <div className="min-w-0 flex-1">
-      <p className="font-mono text-[7px] font-bold tracking-[0.16em] text-cyan-400">
-        T3KIT · WEB3 ECOSYSTEM
-      </p>
-
-      <p className="mt-1 text-sm font-semibold tracking-tight text-white">
-        Looking to build a career in Web3?
-      </p>
-
-      <p className="mt-1 font-mono text-[7px] tracking-[0.08em] text-zinc-500">
-        Learn. Build. Find opportunities.
-      </p>
-    </div>
-
-    <span className="shrink-0 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.06] px-2.5 py-2 font-mono text-[7px] font-bold tracking-[0.12em] text-cyan-300 transition group-hover:bg-cyan-400/[0.1]">
-      VISIT T3KIT ↗
-    </span>
-  </div>
-</a>
 
 export default function Home() {
   const { user, isLoaded } = useUser();
@@ -759,7 +725,43 @@ export default function Home() {
 
     loadAccount();
 
-    return () => {
+    return (
+{/* T3KIT FLOATING PROMO */}
+<a
+  href="https://t3kit.xyz"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="group fixed bottom-5 left-1/2 z-50 w-[calc(100%-24px)] max-w-[380px] -translate-x-1/2 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080808]/95 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.14]"
+>
+  <div className="flex items-center gap-3">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]">
+      <img
+        src="https://www.t3kit.xyz/assets/images/logo.webp"
+        alt="T3Kit"
+        className="h-7 w-7 object-contain"
+      />
+    </div>
+
+    <div className="min-w-0 flex-1">
+      <p className="font-mono text-[7px] font-bold tracking-[0.16em] text-cyan-400">
+        T3KIT · WEB3 ECOSYSTEM
+      </p>
+
+      <p className="mt-1 text-sm font-semibold tracking-tight text-white">
+        Looking to build a career in Web3?
+      </p>
+
+      <p className="mt-1 font-mono text-[7px] tracking-[0.08em] text-zinc-500">
+        Learn. Build. Find opportunities.
+      </p>
+    </div>
+
+    <span className="shrink-0 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.06] px-2.5 py-2 font-mono text-[7px] font-bold tracking-[0.12em] text-cyan-300 transition group-hover:bg-cyan-400/[0.1]">
+      VISIT T3KIT ↗
+    </span>
+  </div>
+</a>
+) => {
       cancelled = true;
     };
   }, [userId, getToken]);
