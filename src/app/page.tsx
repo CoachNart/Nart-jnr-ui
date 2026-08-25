@@ -15,6 +15,10 @@ type NartSetup = {
   target?: number | null;
   riskReward?: number | string | null;
   status?: string;
+  stage?: string;
+  grade?: string;
+  score?: number | string | null;
+  confidence?: string | null;
   timeframe?: string | null;
   bias?: string;
   reason?: string[];
@@ -25,6 +29,10 @@ type NartSetup = {
     bias?: string;
     direction?: string;
     status?: string;
+    stage?: string;
+    grade?: string;
+    score?: number | null;
+    confidence?: string;
     entry?: number | null;
     stop?: number | null;
     target?: number | null;
@@ -189,7 +197,12 @@ function SetupCard({
   onOpen,
   signalLocked = false,
 }: {
-  setup: (typeof setups)[number];
+  setup: (typeof setups)[number] & {
+    stage?: string;
+    grade?: string;
+    score?: number | string | null;
+    confidence?: string | null;
+  };
   onOpen: () => void;
   signalLocked?: boolean;
 }) {
@@ -282,19 +295,57 @@ function SetupCard({
             <div className="w-[110px] shrink-0 text-right">
 
               <div className="flex items-center justify-end gap-1.5 overflow-hidden">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 shadow-[0_0_9px_rgba(239,68,68,0.65)]" />
+                <span
+                  className={
+                    setup.status === "ACTIVE"
+                      ? "h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 shadow-[0_0_9px_rgba(239,68,68,0.65)]"
+                      : setup.status === "READY"
+                        ? "h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_9px_rgba(34,211,238,0.65)]"
+                        : setup.status === "ARMED"
+                          ? "h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 shadow-[0_0_9px_rgba(251,191,36,0.55)]"
+                          : setup.status === "DEVELOPING"
+                            ? "h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400"
+                            : setup.status === "TARGET_HIT" ||
+                                setup.status === "TP_HIT"
+                              ? "h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"
+                              : setup.status === "STOP_HIT"
+                                ? "h-1.5 w-1.5 shrink-0 rounded-full bg-red-600"
+                                : "h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-500"
+                  }
+                />
 
-                <span className="truncate font-mono text-[7px] font-bold tracking-[0.12em] text-red-400">
-                  {setup.status}
+                <span
+                  className={
+                    setup.status === "ACTIVE"
+                      ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-red-400"
+                      : setup.status === "READY"
+                        ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-cyan-400"
+                        : setup.status === "ARMED"
+                          ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-amber-300"
+                          : setup.status === "DEVELOPING"
+                            ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-zinc-400"
+                            : setup.status === "TARGET_HIT" ||
+                                setup.status === "TP_HIT"
+                              ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-emerald-400"
+                              : setup.status === "STOP_HIT"
+                                ? "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-red-500"
+                                : "truncate font-mono text-[7px] font-bold tracking-[0.12em] text-zinc-500"
+                  }
+                >
+                  {setup.status || "UNKNOWN"}
                 </span>
               </div>
 
               <p className="mt-3 font-mono text-[7px] tracking-[0.16em] text-zinc-600">
-                QUALITY
+                SETUP GRADE
               </p>
 
               <p className="font-mono text-sm font-bold text-cyan-300">
-                {setup.quality}
+                {setup.grade || setup.quality || "WATCH"}
+              </p>
+
+              <p className="mt-1 font-mono text-[7px] font-bold tracking-[0.12em] text-zinc-600">
+                {setup.score != null ? `${setup.score}/100` : "—"}
               </p>
 
             </div>
@@ -457,8 +508,14 @@ function SetupCard({
               </p>
 
               <p className="mt-2 font-mono text-2xl font-bold text-white">
-                {setup.confidence}
+                {setup.confidence || "WATCH"}
               </p>
+
+              {setup.score != null && (
+                <p className="mt-1 font-mono text-[7px] tracking-[0.14em] text-zinc-600">
+                  SCORE {setup.score}/100
+                </p>
+              )}
 
             </div>
 
@@ -524,6 +581,9 @@ export default function Home() {
 
   const [liveAnalysis, setLiveAnalysis] =
     useState<NartAnalysis | null>(null);
+
+  const [analysisError, setAnalysisError] =
+    useState<string | null>(null);
 
   const [liveSetups, setLiveSetups] =
     useState<NartSetup[]>([]);
@@ -721,6 +781,11 @@ export default function Home() {
 
         if (!cancelled) {
           setLiveAnalysis(null);
+          setAnalysisError(
+            error instanceof Error
+              ? error.message
+              : "Analysis failed to load"
+          );
         }
       }
     }
@@ -957,7 +1022,47 @@ export default function Home() {
             : direction === "SHORT"
               ? "bearish"
               : "neutral");
-        const status = plan.status || "WAIT";
+        const status =
+          String(
+            item.status ||
+            plan.status ||
+            "DEVELOPING"
+          ).toUpperCase();
+
+        const grade =
+          item.grade ||
+          plan.grade ||
+          "WATCH";
+
+        const score =
+          item.score ??
+          plan.score ??
+          null;
+
+        const confidence =
+          item.confidence ||
+          plan.confidence ||
+          (
+            grade === "A"
+              ? "HIGH"
+              : grade === "B"
+                ? "MEDIUM"
+                : grade === "C"
+                  ? "LOW"
+                  : "WATCH"
+          );
+
+        const stage =
+          item.stage ||
+          (
+            status === "ARMED"
+              ? "ARMED"
+              : status === "READY"
+                ? "READY"
+                : status === "ACTIVE"
+                  ? "ACTIVE"
+                  : status
+          );
 
         return {
           pair: item.symbol,
@@ -967,9 +1072,12 @@ export default function Home() {
               : direction === "LONG"
                 ? "LONG"
                 : "WAIT",
-          quality: bias === "bullish" || bias === "bearish"
-            ? "A"
-            : "—",
+          quality: grade,
+          grade,
+          score,
+          confidence,
+          stage,
+
           price: formatPrice(item.price),
           entry:
             plan.entry != null
@@ -990,12 +1098,6 @@ export default function Home() {
           timeframe: "LIVE ENGINE",
           premium: false,
           status,
-          confidence:
-            status === "ENTRY CONFIRMED"
-              ? "HIGH"
-              : status === "WAIT"
-                ? "WATCH"
-                : status,
           thesis:
             plan.reason?.length
               ? plan.reason.join(" • ")
@@ -1493,7 +1595,9 @@ export default function Home() {
                 <p className="text-sm text-zinc-500">
                   {apiLoading
                     ? "Synchronizing with KitSetups engine..."
-                    : "Analysis unavailable."}
+                    : analysisError
+                      ? `Analysis: ${analysisError}`
+                      : "Analysis unavailable."}
                 </p>
               </div>
             )}
