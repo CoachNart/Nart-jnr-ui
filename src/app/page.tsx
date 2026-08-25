@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUser, useClerk, useAuth } from "@clerk/nextjs";
-import { initAnalytics } from "@/lib/firebase";
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut,
+} from "firebase/auth";
+import {
+  auth,
+  googleProvider,
+  initAnalytics,
+} from "@/lib/firebase";
 
 type Tab = "home" | "setups" | "analysis" | "profile";
 
@@ -564,9 +572,6 @@ function SetupCard({
 
 
 export default function Home() {
-  const { user, isLoaded } = useUser();
-  const { signOut, openSignIn } = useClerk();
-  const { getToken } = useAuth();
 
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "home";
@@ -666,38 +671,49 @@ export default function Home() {
     useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    let cancelled = false;
 
     initAnalytics().catch((error) => {
       console.error("❌ Firebase Analytics failed:", error);
     });
 
-    if (user) {
-      const clerkUser = {
-        id: user.id,
-        email: user.primaryEmailAddress?.emailAddress || "",
-        displayName: user.fullName || user.username || null,
-        photoURL: user.imageUrl || null,
-      };
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (cancelled) return;
 
-      setAuthUser(clerkUser);
-      setUserId(user.id);
-      setAuthError(null);
-    } else {
-      setAuthUser(null);
-      setUserId("");
-      setAccount(null);
-    }
+      if (user) {
+        setAuthUser({
+          id: user.uid,
+          email: user.email || "",
+          displayName: user.displayName || null,
+          photoURL: user.photoURL || null,
+        });
 
-    setAuthLoading(false);
-  }, [user, isLoaded]);
+        setUserId(user.uid);
+        setAuthError(null);
+      } else {
+        setAuthUser(null);
+        setUserId("");
+        setAccount(null);
+      }
 
-  async function getClerkToken() {
+      setAuthLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  async function getFirebaseToken() {
     try {
-      const token = await getToken();
-      return token || null;
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) return null;
+
+      return await currentUser.getIdToken();
     } catch (error) {
-      console.error("❌ Clerk token retrieval failed:", error);
+      console.error("❌ Firebase token retrieval failed:", error);
       return null;
     }
   }
@@ -716,7 +732,7 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           "https://nart-jnr-1.onrender.com";
 
-        const token = await getClerkToken();
+        const token = await getFirebaseToken();
 
         if (!token) {
           throw new Error("Authentication token unavailable");
@@ -756,7 +772,7 @@ export default function Home() {
 ) => {
       cancelled = true;
     };
-  }, [userId, getToken]);
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -774,7 +790,7 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           "https://nart-jnr-1.onrender.com";
 
-        const token = await getClerkToken();
+        const token = await getFirebaseToken();
 
         console.log("KITSETUPS AUTH DEBUG:", {
           uid: userId,
@@ -839,7 +855,7 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           "https://nart-jnr-1.onrender.com";
 
-        const token = await getClerkToken();
+        const token = await getFirebaseToken();
 
         console.log("KITSETUPS AUTH DEBUG:", {
           uid: userId,
@@ -921,27 +937,43 @@ export default function Home() {
       setAuthError(null);
       setAuthLoading(true);
 
-      await openSignIn({
-        forceRedirectUrl: window.location.href,
-      });
-    } catch (error) {
-      console.error("❌ Clerk Google sign-in failed:", error);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
 
-      if (error instanceof Error) {
+      setAuthUser({
+        id: user.uid,
+        email: user.email || "",
+        displayName: user.displayName || null,
+        photoURL: user.photoURL || null,
+      });
+
+      setUserId(user.uid);
+      setAuthError(null);
+    } catch (error) {
+      console.error("❌ Google sign-in failed:", error);
+
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "auth/popup-closed-by-user"
+      ) {
+        setAuthError(null);
+      } else if (error instanceof Error) {
         setAuthError(error.message);
       } else {
         setAuthError("Google sign-in failed. Please try again.");
       }
-
+    } finally {
       setAuthLoading(false);
     }
   }
 
   async function logout() {
     try {
-      await signOut();
+      await signOut(auth);
     } catch (error) {
-      console.error("❌ Clerk logout failed:", error);
+      console.error("❌ Firebase logout failed:", error);
     }
 
     setAuthUser(null);
