@@ -49,6 +49,25 @@ type NartSetup = {
   confidence?: string | null;
   timeframe?: string | null;
   bias?: string;
+
+  signalState?: string;
+
+  lifecycle?: {
+    status?: string | null;
+    entryHit?: boolean;
+    entryHitAt?: string | null;
+    stopLossHit?: boolean;
+    stopLossHitAt?: string | null;
+    outcome?: string | null;
+    closedAt?: string | null;
+    lastPrice?: number | null;
+    lastCheckedAt?: string | null;
+    targets?: Array<{
+      price?: number;
+      hit?: boolean;
+      hitAt?: string | null;
+    }>;
+  };
   reason?: string[];
   entryZone?: {
     timeframe?: string | null;
@@ -231,7 +250,16 @@ function isWatchStatus(status?: string | null) {
 
 function isExecutionStatus(status?: string | null) {
   const value = getSetupStatus(status);
-  return value === "READY" || value === "ARMED" || value === "ACTIVE";
+
+  return [
+    "READY",
+    "ARMED",
+    "ACTIVE",
+    "TP_HIT",
+    "STOP_LOSS",
+    "MISSED",
+    "EXPIRED",
+  ].includes(value);
 }
 
 function SetupCard({
@@ -244,6 +272,22 @@ function SetupCard({
     grade?: string;
     score?: number | string | null;
     confidence?: string | null;
+    lifecycle?: {
+      status?: string | null;
+      entryHit?: boolean;
+      entryHitAt?: string | null;
+      stopLossHit?: boolean;
+      stopLossHitAt?: string | null;
+      outcome?: string | null;
+      closedAt?: string | null;
+      lastPrice?: number | null;
+      lastCheckedAt?: string | null;
+      targets?: Array<{
+        price?: number;
+        hit?: boolean;
+        hitAt?: string | null;
+      }>;
+    };
   };
   onOpen: () => void;
   signalLocked?: boolean;
@@ -253,6 +297,39 @@ function SetupCard({
   const status = getSetupStatus(setup.status);
   const watchOnly = isWatchStatus(status);
   const executionStatus = isExecutionStatus(status);
+
+  const lifecycle = setup.lifecycle || {};
+  const lifecycleStatus = getSetupStatus(
+    lifecycle.status || status
+  );
+
+  const hitTargets = Array.isArray(lifecycle.targets)
+    ? lifecycle.targets.filter((target) => target.hit).length
+    : 0;
+
+  const totalTargets = Array.isArray(lifecycle.targets)
+    ? lifecycle.targets.length
+    : 0;
+
+  const lifecycleClosed = [
+    "TP_HIT",
+    "STOP_LOSS",
+    "MISSED",
+    "EXPIRED",
+  ].includes(lifecycleStatus);
+
+  const lifecycleLabel =
+    lifecycleStatus === "TP_HIT"
+      ? "TARGET HIT"
+      : lifecycleStatus === "STOP_LOSS"
+        ? "STOP LOSS"
+        : lifecycleStatus === "MISSED"
+          ? "MISSED"
+          : lifecycleStatus === "EXPIRED"
+            ? "EXPIRED"
+            : lifecycleStatus === "ACTIVE"
+              ? "ENTRY HIT · ACTIVE"
+              : lifecycleStatus;
 
   return (
     <button
@@ -520,6 +597,75 @@ function SetupCard({
 
           {!watchOnly && (
             <>
+              {/* SIGNAL LIFECYCLE */}
+              <div className="mt-5 border border-white/[0.06] bg-white/[0.015] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-[7px] font-bold tracking-[0.2em] text-zinc-600">
+                      SIGNAL LIFECYCLE
+                    </p>
+
+                    <p className="mt-1 font-mono text-[10px] font-bold text-white">
+                      {lifecycleLabel}
+                    </p>
+                  </div>
+
+                  {totalTargets > 0 && (
+                    <span className="font-mono text-[8px] font-bold text-emerald-400">
+                      TP {hitTargets}/{totalTargets}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+
+                  <div className="border border-white/[0.05] bg-white/[0.02] p-2.5">
+                    <p className="font-mono text-[6px] tracking-[0.14em] text-zinc-600">
+                      ENTRY
+                    </p>
+
+                    <p className={`mt-1 font-mono text-[8px] font-bold ${
+                      lifecycle.entryHit
+                        ? "text-emerald-400"
+                        : "text-zinc-500"
+                    }`}>
+                      {lifecycle.entryHit ? "HIT" : "WAIT"}
+                    </p>
+                  </div>
+
+                  <div className="border border-white/[0.05] bg-white/[0.02] p-2.5">
+                    <p className="font-mono text-[6px] tracking-[0.14em] text-zinc-600">
+                      STOP
+                    </p>
+
+                    <p className={`mt-1 font-mono text-[8px] font-bold ${
+                      lifecycle.stopLossHit
+                        ? "text-red-400"
+                        : "text-emerald-400"
+                    }`}>
+                      {lifecycle.stopLossHit ? "HIT" : "SAFE"}
+                    </p>
+                  </div>
+
+                  <div className="border border-white/[0.05] bg-white/[0.02] p-2.5">
+                    <p className="font-mono text-[6px] tracking-[0.14em] text-zinc-600">
+                      RESULT
+                    </p>
+
+                    <p className={`mt-1 font-mono text-[8px] font-bold ${
+                      lifecycleClosed
+                        ? lifecycleStatus === "TP_HIT"
+                          ? "text-emerald-400"
+                          : "text-red-400"
+                        : "text-zinc-500"
+                    }`}>
+                      {lifecycle.outcome || "OPEN"}
+                    </p>
+                  </div>
+
+                </div>
+              </div>
+
               {/* RISK / REWARD */}
               <div className="mt-7 grid grid-cols-2 gap-3">
 
@@ -1106,97 +1252,126 @@ export default function Home() {
   };
 
   const displaySetups = liveSetups.map((item) => {
-        const plan = item.tradePlan || item;
-        const direction = plan.direction || "WAIT";
-        const bias =
-          plan.bias ||
-          (direction === "LONG"
-            ? "bullish"
-            : direction === "SHORT"
-              ? "bearish"
-              : "neutral");
-        const status =
-          String(
-            item.status ||
-            plan.status ||
-            "DEVELOPING"
-          ).toUpperCase();
+    const plan = item.tradePlan || item;
+    const direction = plan.direction || "WAIT";
 
-        const grade =
-          item.grade ||
-          plan.grade ||
-          "WATCH";
+    const bias =
+      plan.bias ||
+      (direction === "LONG"
+        ? "bullish"
+        : direction === "SHORT"
+          ? "bearish"
+          : "neutral");
 
-        const score =
-          item.score ??
-          plan.score ??
-          null;
+    const lifecycle = item.lifecycle || {};
+    const lifecycleStatus =
+      String(
+        lifecycle.status ||
+        item.signalState ||
+        item.status ||
+        plan.status ||
+        "DEVELOPING"
+      ).toUpperCase();
 
-        const confidence =
-          item.confidence ||
-          plan.confidence ||
-          (
-            grade === "A"
-              ? "HIGH"
-              : grade === "B"
-                ? "MEDIUM"
-                : grade === "C"
-                  ? "LOW"
-                  : "WATCH"
-          );
+    const status = lifecycleStatus;
 
-        const stage =
-          item.stage ||
-          (
-            status === "ARMED"
-              ? "ARMED"
-              : status === "READY"
-                ? "READY"
-                : status === "ACTIVE"
-                  ? "ACTIVE"
-                  : status
-          );
+    const grade =
+      item.grade ||
+      plan.grade ||
+      "WATCH";
 
-        return {
-          pair: item.symbol,
-          side:
-            direction === "SHORT"
-              ? "SHORT"
-              : direction === "LONG"
-                ? "LONG"
-                : "WAIT",
-          quality: grade,
-          grade,
-          score,
-          confidence,
-          stage,
+    const score =
+      item.score ??
+      plan.score ??
+      null;
 
-          price: formatPrice(item.price),
-          entry:
-            plan.entry != null
-              ? formatPrice(plan.entry)
-              : "—",
-          stop:
-            plan.stop != null
-              ? formatPrice(plan.stop)
-              : "—",
-          target:
-            plan.target != null
-              ? formatPrice(plan.target)
-              : "—",
-          rr:
-            plan.riskReward != null
-              ? `${plan.riskReward}R`
-              : "—",
-          timeframe: "LIVE ENGINE",
-          premium: false,
-          status,
-          thesis:
-            plan.reason?.length
-              ? plan.reason.join(" • ")
-              : "KitSetups is monitoring this market.",
-        };
-      });
+    const confidence =
+      item.confidence ||
+      plan.confidence ||
+      (
+        grade === "A"
+          ? "HIGH"
+          : grade === "B"
+            ? "MEDIUM"
+            : grade === "C"
+              ? "LOW"
+              : "WATCH"
+      );
+
+    const stage =
+      item.stage ||
+      (
+        status === "ARMED"
+          ? "ARMED"
+          : status === "READY"
+            ? "READY"
+            : status === "ACTIVE"
+              ? "ACTIVE"
+              : status
+      );
+
+    return {
+      pair: item.symbol,
+      side:
+        direction === "SHORT"
+          ? "SHORT"
+          : direction === "LONG"
+            ? "LONG"
+            : "WAIT",
+
+      quality: grade,
+      grade,
+      score,
+      confidence,
+      stage,
+
+      price: formatPrice(item.price),
+
+      entry:
+        plan.entry != null
+          ? formatPrice(plan.entry)
+          : "—",
+
+      stop:
+        plan.stop != null
+          ? formatPrice(plan.stop)
+          : "—",
+
+      target:
+        plan.target != null
+          ? formatPrice(plan.target)
+          : "—",
+
+      rr:
+        plan.riskReward != null
+          ? `${plan.riskReward}R`
+          : "—",
+
+      timeframe: "LIVE ENGINE",
+      premium: false,
+      status,
+
+      lifecycle: {
+        status: lifecycleStatus,
+        entryHit: Boolean(lifecycle.entryHit),
+        entryHitAt: lifecycle.entryHitAt || null,
+        stopLossHit: Boolean(lifecycle.stopLossHit),
+        stopLossHitAt: lifecycle.stopLossHitAt || null,
+        outcome: lifecycle.outcome || null,
+        closedAt: lifecycle.closedAt || null,
+        targets: Array.isArray(lifecycle.targets)
+          ? lifecycle.targets
+          : [],
+        lastPrice: lifecycle.lastPrice ?? null,
+        lastCheckedAt: lifecycle.lastCheckedAt || null,
+      },
+
+      thesis:
+        plan.reason?.length
+          ? plan.reason.join(" • ")
+          : "KitSetups is monitoring this market.",
+    };
+  });
 
 
   return (
