@@ -12,6 +12,26 @@ import {
   initAnalytics,
 } from "@/lib/firebase";
 
+const KITSETUPS_DEVICE_ID = "kitsetups_device_id";
+
+function getDeviceId() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    let deviceId = localStorage.getItem(KITSETUPS_DEVICE_ID);
+
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem(KITSETUPS_DEVICE_ID, deviceId);
+    }
+
+    return deviceId;
+  } catch (error) {
+    console.error("❌ Device ID error:", error);
+    return null;
+  }
+}
+
 type Tab = "home" | "setups" | "analysis" | "profile";
 
 type NartSetup = {
@@ -742,6 +762,7 @@ export default function Home() {
           headers: {
             Authorization: `Bearer ${token}`,
             "X-Nart-User": userId,
+            "X-KitSetups-Device": getDeviceId() || "",
           },
           cache: "no-store",
           credentials: "include",
@@ -2123,6 +2144,43 @@ export default function Home() {
                 </button>
 
               </div>
+
+              {/* SIGN OUT */}
+              <button
+                onClick={async () => {
+                  try {
+                    setAuthLoading(true);
+                    await signOut(auth);
+                  } catch (error) {
+                    console.error("❌ Sign out failed:", error);
+                    setAuthError(
+                      error instanceof Error
+                        ? error.message
+                        : "Unable to sign out. Please try again."
+                    );
+                  } finally {
+                    setAuthLoading(false);
+                  }
+                }}
+                disabled={authLoading}
+                className="w-full rounded-2xl border border-red-400/10 bg-red-400/[0.025] px-4 py-3 text-left transition hover:border-red-400/20 hover:bg-red-400/[0.05] active:scale-[0.99] disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[9px] font-black tracking-[0.16em] text-red-300">
+                      SIGN OUT
+                    </p>
+
+                    <p className="mt-1 text-[8px] text-zinc-600">
+                      Sign out of this KitSetups account
+                    </p>
+                  </div>
+
+                  <span className="text-sm text-red-300/70">
+                    →
+                  </span>
+                </div>
+              </button>
 
             </div>
 

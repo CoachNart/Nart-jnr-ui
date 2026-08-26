@@ -18,7 +18,7 @@ const firebaseConfig = {
     "kitsetups",
   storageBucket:
     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ??
-    "kitsetups.appspot.com",
+    "kitsetups.firebasestorage.app",
   messagingSenderId:
     process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ??
     "350160391761",
