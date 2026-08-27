@@ -1,10 +1,4 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  setPersistence,
-  browserLocalPersistence,
-} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
@@ -34,27 +28,6 @@ const app =
   getApps().length > 0
     ? getApp()
     : initializeApp(firebaseConfig);
-
-export const auth = getAuth(app);
-
-export const googleProvider =
-  new GoogleAuthProvider();
-
-googleProvider.setCustomParameters({
-  prompt: "select_account",
-});
-
-if (typeof window !== "undefined") {
-  setPersistence(
-    auth,
-    browserLocalPersistence
-  ).catch((error) => {
-    console.error(
-      "Firebase persistence setup failed:",
-      error
-    );
-  });
-}
 
 export const db = getFirestore(app);
 
