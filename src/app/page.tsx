@@ -35,22 +35,53 @@ function getDeviceId() {
 type Tab = "home" | "setups" | "analysis" | "profile";
 
 type NartSetup = {
-  symbol: string;
+  symbol?: string;
+  pair?: string;
+
   price?: number | string;
   direction?: string;
-  entry?: number | null;
-  stop?: number | null;
-  target?: number | null;
+  side?: string;
+
+  entry?: number | string | null;
+  stop?: number | string | null;
+  target?: number | string | null;
+
   riskReward?: number | string | null;
+  rr?: string;
+
   status?: string;
   stage?: string;
   grade?: string;
   score?: number | string | null;
   confidence?: string | null;
+  quality?: string;
   timeframe?: string | null;
   bias?: string;
 
+  premium?: boolean;
+  thesis?: string;
   signalState?: string;
+
+  lifecycleStatus?: string | null;
+
+  tradePlan?: {
+    lifecycleStatus?: string | null;
+    bias?: string;
+    direction?: string;
+    status?: string;
+    stage?: string;
+    grade?: string;
+    score?: number | string | null;
+    confidence?: string | null;
+    entry?: number | string | null;
+    stop?: number | string | null;
+    target?: number | string | null;
+    riskReward?: number | string | null;
+    reason?: string[];
+    entryZone?: {
+      timeframe?: string | null;
+    } | null;
+  };
 
   lifecycle?: {
     status?: string | null;
@@ -68,27 +99,13 @@ type NartSetup = {
       hitAt?: string | null;
     }>;
   };
+
   reason?: string[];
+
   entryZone?: {
     timeframe?: string | null;
   } | null;
-  tradePlan?: {
-    bias?: string;
-    direction?: string;
-    status?: string;
-    stage?: string;
-    grade?: string;
-    score?: number | null;
-    confidence?: string;
-    entry?: number | null;
-    stop?: number | null;
-    target?: number | null;
-    riskReward?: number | string | null;
-    reason?: string[];
-    entryZone?: {
-      timeframe?: string | null;
-    } | null;
-  };
+
   generatedAt?: string;
 };
 
@@ -117,7 +134,7 @@ type NartAnalysis = {
 };
 
 
-const setups = [
+const setups: NartSetup[] = [
   {
     pair: "BTCUSDT",
     side: "LONG",
@@ -207,7 +224,21 @@ function LiveBadge() {
       </span>
 
       <span className="font-mono text-[8px] font-bold tracking-[0.2em] text-red-400">
-        LIVE FEED
+        <div
+  className="relative flex h-8 w-8 items-center justify-center"
+  aria-label="Scanning for signals"
+>
+  <span className="absolute h-5 w-5 rounded-full border border-emerald-400/30 animate-ping" />
+  <span className="absolute h-6 w-6 rounded-full border border-emerald-400/15 animate-[ping_2s_ease-out_infinite]" />
+
+  <span className="relative h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]">
+    <span className="absolute inset-0 rounded-full bg-emerald-300 animate-pulse" />
+  </span>
+
+  <span className="absolute h-px w-7 overflow-hidden rounded-full bg-emerald-400/10">
+    <span className="absolute left-0 top-0 h-full w-2/5 bg-emerald-400/70 animate-[scan_1.6s_ease-in-out_infinite]" />
+  </span>
+</div>
       </span>
     </div>
   );
@@ -299,8 +330,19 @@ function SetupCard({
   const executionStatus = isExecutionStatus(status);
 
   const lifecycle = setup.lifecycle || {};
+
+  /*
+   * LIFECYCLE AUTHORITY
+   *
+   * Backend lifecycle is the source of truth.
+   * Never let the fresh trade-plan status overwrite
+   * an evaluated lifecycle state.
+   */
   const lifecycleStatus = getSetupStatus(
-    lifecycle.status || status
+    lifecycle.status ||
+    setup.signalState ||
+    setup.tradePlan?.lifecycleStatus ||
+    status
   );
 
   const hitTargets = Array.isArray(lifecycle.targets)
@@ -514,7 +556,7 @@ function SetupCard({
               </p>
 
               <span className="font-mono text-[8px] tracking-[0.14em] text-zinc-700">
-                {setup.pair.replace("USDT", "")}/USDT
+                {(setup.pair || setup.symbol || "UNKNOWN").replace("USDT", "")}/USDT
               </span>
 
             </div>
@@ -1347,7 +1389,27 @@ export default function Home() {
             Checking your session...
           </p>
         </div>
-      </main>
+
+<style jsx global>{`
+  @keyframes scan {
+    0% {
+      transform: translateX(-150%);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(350%);
+      opacity: 0;
+    }
+  }
+`}</style>
+
+</main>
     );
   }
 
@@ -1417,10 +1479,19 @@ export default function Home() {
           : "neutral");
 
     const lifecycle = item.lifecycle || {};
+
+    /*
+     * LIFECYCLE AUTHORITY
+     *
+     * Prefer the persisted lifecycle from the backend.
+     * tradePlan.status is only a fallback for older signals
+     * that do not contain lifecycle information.
+     */
     const lifecycleStatus =
       String(
         lifecycle.status ||
         item.signalState ||
+        plan.lifecycleStatus ||
         item.status ||
         plan.status ||
         "DEVELOPING"
@@ -2535,17 +2606,17 @@ export default function Home() {
 
                 <div className="mt-2 flex items-center gap-3">
                   <h1 className="text-3xl font-black tracking-tight">
-                    {selectedSetup.pair}
+                    {(selectedSetup.pair || selectedSetup.symbol || "UNKNOWN")}
                   </h1>
 
                   <span
                     className={`rounded-lg px-2.5 py-1 text-[9px] font-bold ${
-                      selectedSetup.side === "LONG"
+                      (selectedSetup.side || selectedSetup.direction || "WAIT") === "LONG"
                         ? "bg-emerald-400/10 text-emerald-300"
                         : "bg-red-400/10 text-red-300"
                     }`}
                   >
-                    {selectedSetup.side}
+                    {(selectedSetup.side || selectedSetup.direction || "WAIT")}
                   </span>
                 </div>
 
@@ -2579,9 +2650,9 @@ export default function Home() {
                 </p>
 
                 <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <Metric label="QUALITY" value={selectedSetup.quality} cyan />
-                  <Metric label="R:R" value={selectedSetup.rr} cyan />
-                  <Metric label="CONFIDENCE" value={selectedSetup.confidence} />
+                  <Metric label="QUALITY" value={(selectedSetup.quality || selectedSetup.grade || "WATCH")} cyan />
+                  <Metric label="R:R" value={(selectedSetup.rr || String(selectedSetup.riskReward ?? "N/A"))} cyan />
+                  <Metric label="CONFIDENCE" value={(selectedSetup.confidence || "WATCH")} />
                   <Metric label="STATUS" value="LOCKED" />
                 </div>
 
@@ -2613,7 +2684,7 @@ export default function Home() {
                     />
                     <Metric
                       label="R:R"
-                      value={selectedSetup.rr}
+                      value={(selectedSetup.rr || String(selectedSetup.riskReward ?? "N/A"))}
                       cyan
                     />
                   </div>
@@ -2621,12 +2692,12 @@ export default function Home() {
                   <div className="mt-3 grid grid-cols-2 gap-3">
                     <Metric
                       label="QUALITY"
-                      value={selectedSetup.quality}
+                      value={(selectedSetup.quality || selectedSetup.grade || "WATCH")}
                       cyan
                     />
                     <Metric
                       label="CONFIDENCE"
-                      value={selectedSetup.confidence}
+                      value={(selectedSetup.confidence || "WATCH")}
                     />
                   </div>
                 </div>
@@ -2639,7 +2710,7 @@ export default function Home() {
                     </p>
 
                     <h3 className="mt-3 text-lg font-bold">
-                      Structure supports {selectedSetup.side.toLowerCase()}
+                      Structure supports {(selectedSetup.side || selectedSetup.direction || "WAIT").toLowerCase()}
                     </h3>
 
                     <p className="mt-3 text-xs leading-6 text-zinc-500">
