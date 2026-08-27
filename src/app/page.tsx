@@ -331,6 +331,32 @@ function SetupCard({
               ? "ENTRY HIT · ACTIVE"
               : lifecycleStatus;
 
+  const hasExecutionLevels =
+    setup.entry != null &&
+    setup.stop != null &&
+    setup.target != null;
+
+  const entryHit = Boolean(lifecycle.entryHit);
+
+  const lifecycleIsClosed = [
+    "TP_HIT",
+    "STOP_LOSS",
+    "MISSED",
+    "EXPIRED",
+  ].includes(lifecycleStatus);
+
+  const lifecycleIsPreEntry =
+    !entryHit &&
+    ["READY", "ARMED", "DEVELOPING"].includes(lifecycleStatus);
+
+  const lifecycleIsActive =
+    entryHit &&
+    !lifecycleIsClosed &&
+    lifecycleStatus === "ACTIVE";
+
+
+
+
   return (
     <button
       onClick={onOpen}
@@ -495,7 +521,7 @@ function SetupCard({
 
           </div>
 
-          {!watchOnly && executionStatus && (
+          {!watchOnly && executionStatus && hasExecutionLevels && (
             <>
               {/* EXECUTION MAP */}
               <div className="mt-7">
@@ -598,73 +624,200 @@ function SetupCard({
           {!watchOnly && (
             <>
               {/* SIGNAL LIFECYCLE */}
-              <div className="mt-5 border border-white/[0.06] bg-white/[0.015] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
+              {!watchOnly && (
+                <div className="mt-5 border border-white/[0.05] bg-white/[0.01] px-4 py-3">
+
+                  <div className="flex items-center justify-between gap-3">
                     <p className="font-mono text-[7px] font-bold tracking-[0.2em] text-zinc-600">
                       SIGNAL LIFECYCLE
                     </p>
 
-                    <p className="mt-1 font-mono text-[10px] font-bold text-white">
+                    <p
+                      className={`font-mono text-[8px] font-bold tracking-[0.12em] ${
+                        lifecycleStatus === "TP_HIT"
+                          ? "text-emerald-400"
+                          : lifecycleStatus === "STOP_LOSS"
+                            ? "text-red-400"
+                            : lifecycleStatus === "EXPIRED" ||
+                                lifecycleStatus === "MISSED"
+                              ? "text-zinc-400"
+                              : lifecycleIsActive
+                                ? "text-violet-400"
+                                : "text-amber-300"
+                      }`}
+                    >
                       {lifecycleLabel}
                     </p>
                   </div>
 
-                  {totalTargets > 0 && (
-                    <span className="font-mono text-[8px] font-bold text-emerald-400">
-                      TP {hitTargets}/{totalTargets}
-                    </span>
+                  {/* PRE-ENTRY / EXPIRED / MISSED */}
+                  {(lifecycleStatus === "EXPIRED" ||
+                    lifecycleStatus === "MISSED" ||
+                    lifecycleIsPreEntry) && (
+                    <div className="mt-3 flex items-center gap-2 overflow-hidden">
+
+                      <span className="font-mono text-[7px] font-bold text-amber-300">
+                        ● READY
+                      </span>
+
+                      <span className="text-[8px] text-zinc-800">→</span>
+
+                      <span
+                        className={`font-mono text-[7px] font-bold ${
+                          lifecycleStatus === "EXPIRED" ||
+                          lifecycleStatus === "MISSED"
+                            ? "text-zinc-500"
+                            : "text-blue-400"
+                        }`}
+                      >
+                        {lifecycleStatus === "EXPIRED"
+                          ? "NOT REACHED"
+                          : lifecycleStatus === "MISSED"
+                            ? "NOT REACHED"
+                            : "WAITING"}
+                      </span>
+
+                      {(lifecycleStatus === "EXPIRED" ||
+                        lifecycleStatus === "MISSED") && (
+                        <>
+                          <span className="text-[8px] text-zinc-800">→</span>
+
+                          <span
+                            className={`font-mono text-[7px] font-bold ${
+                              lifecycleStatus === "EXPIRED"
+                                ? "text-zinc-400"
+                                : "text-zinc-400"
+                            }`}
+                          >
+                            {lifecycleStatus}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   )}
+
+                  {/* ACTIVE TRADE */}
+                  {entryHit &&
+                    lifecycleStatus !== "TP_HIT" &&
+                    lifecycleStatus !== "STOP_LOSS" &&
+                    lifecycleStatus !== "EXPIRED" &&
+                    lifecycleStatus !== "MISSED" && (
+                      <div className="mt-3 flex items-center gap-2 overflow-hidden">
+
+                        <span className="font-mono text-[7px] font-bold text-amber-300">
+                          ● READY
+                        </span>
+
+                        <span className="text-[8px] text-zinc-800">→</span>
+
+                        <span className="font-mono text-[7px] font-bold text-blue-400">
+                          ● ENTRY
+                        </span>
+
+                        <span className="text-[8px] text-zinc-800">→</span>
+
+                        <span className="font-mono text-[7px] font-bold text-violet-400">
+                          ● ACTIVE
+                        </span>
+
+                        <span className="text-[8px] text-zinc-800">→</span>
+
+                        <span className="font-mono text-[7px] font-bold text-zinc-600">
+                          TARGETS
+                        </span>
+
+                        <span className="text-[8px] text-zinc-800">→</span>
+
+                        <span className="font-mono text-[7px] font-bold text-zinc-600">
+                          OPEN
+                        </span>
+
+                      </div>
+                    )}
+
+                  {/* TAKE PROFIT */}
+                  {lifecycleStatus === "TP_HIT" && (
+                    <div className="mt-3 flex items-center gap-2 overflow-hidden">
+
+                      <span className="font-mono text-[7px] font-bold text-amber-300">
+                        ● READY
+                      </span>
+
+                      <span className="text-[8px] text-zinc-800">→</span>
+
+                      <span className="font-mono text-[7px] font-bold text-blue-400">
+                        ● ENTRY
+                      </span>
+
+                      <span className="text-[8px] text-zinc-800">→</span>
+
+                      <span className="font-mono text-[7px] font-bold text-violet-400">
+                        ● ACTIVE
+                      </span>
+
+                      <span className="text-[8px] text-zinc-800">→</span>
+
+                      <span className="font-mono text-[7px] font-bold text-emerald-400">
+                        ● TARGET
+                      </span>
+
+                      <span className="text-[8px] text-zinc-800">→</span>
+
+                      <span className="font-mono text-[7px] font-bold text-emerald-400">
+                        ● PROFIT
+                      </span>
+
+                    </div>
+                  )}
+
+                  {/* STOP LOSS */}
+                  {lifecycleStatus === "STOP_LOSS" && (
+                    <div className="mt-3 flex items-center gap-2 overflow-hidden">
+
+                      <span className="font-mono text-[7px] font-bold text-amber-300">
+                        ● READY
+                      </span>
+
+                      <span className="text-[8px] text-zinc-800">→</span>
+
+                      <span className="font-mono text-[7px] font-bold text-blue-400">
+                        ● ENTRY
+                      </span>
+
+                      <span className="text-[8px] text-zinc-800">→</span>
+
+                      <span className="font-mono text-[7px] font-bold text-violet-400">
+                        ● ACTIVE
+                      </span>
+
+                      <span className="text-[8px] text-zinc-800">→</span>
+
+                      <span className="font-mono text-[7px] font-bold text-red-400">
+                        ● STOP
+                      </span>
+
+                      <span className="text-[8px] text-zinc-800">→</span>
+
+                      <span className="font-mono text-[7px] font-bold text-red-400">
+                        ● LOSS
+                      </span>
+
+                    </div>
+                  )}
+
+                  {/* TARGET PROGRESS */}
+                  {totalTargets > 0 &&
+                    lifecycleStatus !== "TP_HIT" &&
+                    lifecycleStatus !== "STOP_LOSS" &&
+                    lifecycleStatus !== "EXPIRED" &&
+                    lifecycleStatus !== "MISSED" && (
+                      <div className="mt-2 font-mono text-[6px] tracking-[0.12em] text-emerald-400">
+                        TP {hitTargets}/{totalTargets}
+                      </div>
+                    )}
+
                 </div>
-
-                <div className="mt-4 grid grid-cols-3 gap-2">
-
-                  <div className="border border-white/[0.05] bg-white/[0.02] p-2.5">
-                    <p className="font-mono text-[6px] tracking-[0.14em] text-zinc-600">
-                      ENTRY
-                    </p>
-
-                    <p className={`mt-1 font-mono text-[8px] font-bold ${
-                      lifecycle.entryHit
-                        ? "text-emerald-400"
-                        : "text-zinc-500"
-                    }`}>
-                      {lifecycle.entryHit ? "HIT" : "WAIT"}
-                    </p>
-                  </div>
-
-                  <div className="border border-white/[0.05] bg-white/[0.02] p-2.5">
-                    <p className="font-mono text-[6px] tracking-[0.14em] text-zinc-600">
-                      STOP
-                    </p>
-
-                    <p className={`mt-1 font-mono text-[8px] font-bold ${
-                      lifecycle.stopLossHit
-                        ? "text-red-400"
-                        : "text-emerald-400"
-                    }`}>
-                      {lifecycle.stopLossHit ? "HIT" : "SAFE"}
-                    </p>
-                  </div>
-
-                  <div className="border border-white/[0.05] bg-white/[0.02] p-2.5">
-                    <p className="font-mono text-[6px] tracking-[0.14em] text-zinc-600">
-                      RESULT
-                    </p>
-
-                    <p className={`mt-1 font-mono text-[8px] font-bold ${
-                      lifecycleClosed
-                        ? lifecycleStatus === "TP_HIT"
-                          ? "text-emerald-400"
-                          : "text-red-400"
-                        : "text-zinc-500"
-                    }`}>
-                      {lifecycle.outcome || "OPEN"}
-                    </p>
-                  </div>
-
-                </div>
-              </div>
+              )}
 
               {/* RISK / REWARD */}
               <div className="mt-7 grid grid-cols-2 gap-3">
