@@ -1,16 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-} from "firebase/auth";
-import {
-  auth,
-  googleProvider,
-  initAnalytics,
-} from "@/lib/firebase";
+import { useAuth, useClerk, useUser } from "@clerk/nextjs";
+import { initAnalytics } from "@/lib/firebase";
 
 const KITSETUPS_DEVICE_ID = "kitsetups_device_id";
 
@@ -988,6 +980,9 @@ function SetupCard({
 
 
 export default function Home() {
+  const { getToken } = useAuth();
+  const { user, isLoaded } = useUser();
+  const { openSignIn, signOut } = useClerk();
 
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "home";
@@ -1126,7 +1121,7 @@ export default function Home() {
       setDeveloperApiLoading(true);
       setDeveloperApiError(null);
 
-      const token = await auth.currentUser?.getIdToken();
+      const token = await getToken();
 
       if (!token) {
         throw new Error("Authentication token unavailable");
@@ -1174,7 +1169,7 @@ export default function Home() {
       setDeveloperApiError(null);
       setDeveloperApiKey(null);
 
-      const token = await auth.currentUser?.getIdToken();
+      const token = await getToken();
 
       if (!token) {
         throw new Error("Authentication token unavailable");
@@ -1230,7 +1225,7 @@ export default function Home() {
       setDeveloperApiLoading(true);
       setDeveloperApiError(null);
 
-      const token = await auth.currentUser?.getIdToken();
+      const token = await getToken();
 
       if (!token) {
         throw new Error("Authentication token unavailable");
@@ -1291,49 +1286,46 @@ export default function Home() {
   }, [authUser?.id]);
 
   useEffect(() => {
-    let cancelled = false;
-
     initAnalytics().catch((error) => {
       console.error("❌ Firebase Analytics failed:", error);
     });
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (cancelled) return;
-
-      if (user) {
-        setAuthUser({
-          id: user.uid,
-          email: user.email || "",
-          displayName: user.displayName || null,
-          photoURL: user.photoURL || null,
-        });
-
-        setUserId(user.uid);
-        setAuthError(null);
-      } else {
-        setAuthUser(null);
-        setUserId("");
-        setAccount(null);
-      }
-
-      setAuthLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
   }, []);
 
-  async function getFirebaseToken() {
+  useEffect(() => {
+    if (!isLoaded) {
+      setAuthLoading(true);
+      return;
+    }
+
+    if (user) {
+      const id = user.id;
+
+      setAuthUser({
+        id,
+        email: user.primaryEmailAddress?.emailAddress || "",
+        displayName: user.fullName || user.username || null,
+        photoURL: user.imageUrl || null,
+      });
+
+      setUserId(id);
+      setAuthError(null);
+    } else {
+      setAuthUser(null);
+      setUserId("");
+      setAccount(null);
+    }
+
+    setAuthLoading(false);
+  }, [isLoaded, user]);
+
+  async function getClerkToken() {
     try {
-      const currentUser = auth.currentUser;
+      if (!isLoaded || !user) return null;
 
-      if (!currentUser) return null;
-
-      return await currentUser.getIdToken();
+      const token = await getToken();
+      return token || null;
     } catch (error) {
-      console.error("❌ Firebase token retrieval failed:", error);
+      console.error("❌ Clerk token retrieval failed:", error);
       return null;
     }
   }
@@ -1352,7 +1344,7 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           "https://nart-jnr-1.onrender.com";
 
-        const token = await getFirebaseToken();
+        const token = await getClerkToken();
 
         if (!token) {
           throw new Error("Authentication token unavailable");
@@ -1411,7 +1403,7 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           "https://nart-jnr-1.onrender.com";
 
-        const token = await getFirebaseToken();
+        const token = await getClerkToken();
 
         console.log("KITSETUPS AUTH DEBUG:", {
           uid: userId,
@@ -1480,7 +1472,7 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           "https://nart-jnr-1.onrender.com";
 
-        const token = await getFirebaseToken();
+        const token = await getClerkToken();
 
         console.log("KITSETUPS AUTH DEBUG:", {
           uid: userId,
@@ -1565,45 +1557,27 @@ export default function Home() {
   async function loginWithGoogle() {
     try {
       setAuthError(null);
-      setAuthLoading(true);
-
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      setAuthUser({
-        id: user.uid,
-        email: user.email || "",
-        displayName: user.displayName || null,
-        photoURL: user.photoURL || null,
+      await openSignIn({
+        fallbackRedirectUrl: "/",
       });
-
-      setUserId(user.uid);
-      setAuthError(null);
     } catch (error) {
-      console.error("❌ Google sign-in failed:", error);
+      console.error("❌ Clerk sign-in failed:", error);
 
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "auth/popup-closed-by-user"
-      ) {
-        setAuthError(null);
-      } else if (error instanceof Error) {
+      if (error instanceof Error) {
         setAuthError(error.message);
       } else {
-        setAuthError("Google sign-in failed. Please try again.");
+        setAuthError("Sign-in failed. Please try again.");
       }
-    } finally {
-      setAuthLoading(false);
     }
   }
 
   async function logout() {
     try {
-      await signOut(auth);
+      await signOut({
+        redirectUrl: "/",
+      });
     } catch (error) {
-      console.error("❌ Firebase logout failed:", error);
+      console.error("❌ Clerk logout failed:", error);
     }
 
     setAuthUser(null);
@@ -3056,7 +3030,7 @@ export default function Home() {
                 onClick={async () => {
                   try {
                     setAuthLoading(true);
-                    await signOut(auth);
+                    await signOut({ redirectUrl: "/" });
                   } catch (error) {
                     console.error("❌ Sign out failed:", error);
                     setAuthError(
