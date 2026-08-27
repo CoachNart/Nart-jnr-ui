@@ -14,21 +14,32 @@ import {
 
 const KITSETUPS_DEVICE_ID = "kitsetups_device_id";
 
-function getDeviceId() {
-  if (typeof window === "undefined") return null;
+function getDeviceId(): string {
+  if (typeof window === "undefined") {
+    throw new Error("Device identification unavailable");
+  }
 
   try {
     let deviceId = localStorage.getItem(KITSETUPS_DEVICE_ID);
 
     if (!deviceId) {
-      deviceId = crypto.randomUUID();
+      if (typeof crypto?.randomUUID === "function") {
+        deviceId = crypto.randomUUID();
+      } else {
+        deviceId = `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+      }
+
       localStorage.setItem(KITSETUPS_DEVICE_ID, deviceId);
+    }
+
+    if (!deviceId) {
+      throw new Error("Device identification unavailable");
     }
 
     return deviceId;
   } catch (error) {
     console.error("❌ Device ID error:", error);
-    return null;
+    throw new Error("Device identification unavailable");
   }
 }
 
@@ -645,7 +656,7 @@ function SetupCard({
                     <div className="mt-3 grid gap-2">
                       {(Array.isArray(lifecycle.targets) && lifecycle.targets.length > 0
                         ? lifecycle.targets
-                        : [{ price: setup.target }]
+                        : [{ price: setup.target, hit: false, hitAt: null }]
                       ).map((target, index) => {
                         const hit = Boolean(target?.hit);
 
@@ -1417,7 +1428,7 @@ export default function Home() {
           headers: {
             Authorization: `Bearer ${token}`,
             "X-Nart-User": userId,
-            "X-KitSetups-Device": getDeviceId(),
+            "X-KitSetups-Device": getDeviceId() || "",
           },
           cache: "no-store",
           credentials: "include",
