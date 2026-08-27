@@ -1111,7 +1111,7 @@ export default function Home() {
 
   const getDeveloperApiBase = () =>
     process.env.NEXT_PUBLIC_NART_API ||
-    "https://nart-jnr-1.onrender.com";
+    process.env.NEXT_PUBLIC_API_URL;
 
   const loadDeveloperApi = async () => {
     if (!authUser) return;
@@ -1335,7 +1335,7 @@ export default function Home() {
       try {
         const base =
           process.env.NEXT_PUBLIC_NART_API ||
-          "https://nart-jnr-1.onrender.com";
+          process.env.NEXT_PUBLIC_API_URL;
 
         const token = await getClerkToken();
 
@@ -1394,7 +1394,7 @@ export default function Home() {
       try {
         const base =
           process.env.NEXT_PUBLIC_NART_API ||
-          "https://nart-jnr-1.onrender.com";
+          process.env.NEXT_PUBLIC_API_URL;
 
         const token = await getClerkToken();
 
@@ -1463,7 +1463,7 @@ export default function Home() {
 
         const base =
           process.env.NEXT_PUBLIC_NART_API ||
-          "https://nart-jnr-1.onrender.com";
+          process.env.NEXT_PUBLIC_API_URL;
 
         const token = await getClerkToken();
 
@@ -2679,7 +2679,7 @@ export default function Home() {
                       try {
                         const base =
                           process.env.NEXT_PUBLIC_NART_API ||
-                          "https://nart-jnr-1.onrender.com";
+                          process.env.NEXT_PUBLIC_API_URL;
 
                         const response =
                           await fetch(
@@ -2989,7 +2989,7 @@ export default function Home() {
                         </p>
 
                         <pre className="mt-3 overflow-x-auto whitespace-pre-wrap font-mono text-[8px] leading-5 text-zinc-400">
-{`curl https://nart-jnr-1.onrender.com/api/v1/signals \\
+{`curl ${process.env.NEXT_PUBLIC_API_URL}/api/v1/signals \\
   -H "X-API-Key: ks_live_YOUR_KEY"`}
                         </pre>
 
