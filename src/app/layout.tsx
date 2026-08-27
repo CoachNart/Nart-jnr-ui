@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     title: "KitSetups — Trading Intelligence",
     description:
       "Live market intelligence, structured trade setups, and execution plans powered by KitSetups.",
-    url: "https://kitsetups.vercel.app",
+    url: "https://kitsetups.xyz",
     siteName: "KitSetups",
     type: "website",
     images: [
