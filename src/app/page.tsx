@@ -2190,8 +2190,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                <LiveBadge />
-
               </div>
             </div>
 
