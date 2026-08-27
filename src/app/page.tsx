@@ -971,6 +971,35 @@ export default function Home() {
   const [apiError, setApiError] =
     useState<string | null>(null);
 
+  const [developerApi, setDeveloperApi] = useState<{
+    active: boolean;
+    keyId?: string;
+    prefix?: string;
+    createdAt?: string | null;
+    lastUsedAt?: string | null;
+    usage?: {
+      month: string;
+      used: number;
+      limit: number;
+      remaining: number;
+    };
+    rateLimit?: {
+      requestsPerMinute: number;
+    };
+  } | null>(null);
+
+  const [developerApiLoading, setDeveloperApiLoading] =
+    useState(false);
+
+  const [developerApiKey, setDeveloperApiKey] =
+    useState<string | null>(null);
+
+  const [developerApiError, setDeveloperApiError] =
+    useState<string | null>(null);
+
+  const [showDeveloperApi, setShowDeveloperApi] =
+    useState(false);
+
   const [showT3KitPromo, setShowT3KitPromo] = useState(false);
 
   useEffect(() => {
@@ -1030,6 +1059,181 @@ export default function Home() {
 
   const [authError, setAuthError] =
     useState<string | null>(null);
+
+  const getDeveloperApiBase = () =>
+    process.env.NEXT_PUBLIC_NART_API ||
+    "https://nart-jnr-1.onrender.com";
+
+  const loadDeveloperApi = async () => {
+    if (!authUser) return;
+
+    try {
+      setDeveloperApiLoading(true);
+      setDeveloperApiError(null);
+
+      const token = await auth.currentUser?.getIdToken();
+
+      if (!token) {
+        throw new Error("Authentication token unavailable");
+      }
+
+      const response = await fetch(
+        `${getDeveloperApiBase()}/api/developer/key`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        },
+      );
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.error ||
+            "Unable to load Developer API",
+        );
+      }
+
+      setDeveloperApi(payload.data);
+    } catch (error) {
+      console.error(
+        "❌ Developer API loading failed:",
+        error,
+      );
+
+      setDeveloperApiError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load Developer API",
+      );
+    } finally {
+      setDeveloperApiLoading(false);
+    }
+  };
+
+  const createDeveloperApiKey = async () => {
+    try {
+      setDeveloperApiLoading(true);
+      setDeveloperApiError(null);
+      setDeveloperApiKey(null);
+
+      const token = await auth.currentUser?.getIdToken();
+
+      if (!token) {
+        throw new Error("Authentication token unavailable");
+      }
+
+      const response = await fetch(
+        `${getDeveloperApiBase()}/api/developer/key`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.error ||
+            "Unable to create API key",
+        );
+      }
+
+      setDeveloperApiKey(payload.key || null);
+
+      await loadDeveloperApi();
+
+      setModal({
+        title: "API KEY CREATED",
+        message:
+          "Your Developer API key has been created. Copy it now — the full key will not be shown again.",
+        success: true,
+      });
+    } catch (error) {
+      console.error(
+        "❌ Developer API key creation failed:",
+        error,
+      );
+
+      setDeveloperApiError(
+        error instanceof Error
+          ? error.message
+          : "Unable to create API key",
+      );
+    } finally {
+      setDeveloperApiLoading(false);
+    }
+  };
+
+  const revokeDeveloperApiKey = async () => {
+    try {
+      setDeveloperApiLoading(true);
+      setDeveloperApiError(null);
+
+      const token = await auth.currentUser?.getIdToken();
+
+      if (!token) {
+        throw new Error("Authentication token unavailable");
+      }
+
+      const response = await fetch(
+        `${getDeveloperApiBase()}/api/developer/key`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.error ||
+            "Unable to revoke API key",
+        );
+      }
+
+      setDeveloperApiKey(null);
+
+      await loadDeveloperApi();
+
+      setModal({
+        title: "API KEY REVOKED",
+        message:
+          "The API key has been permanently revoked.",
+        success: true,
+      });
+    } catch (error) {
+      console.error(
+        "❌ Developer API key revoke failed:",
+        error,
+      );
+
+      setDeveloperApiError(
+        error instanceof Error
+          ? error.message
+          : "Unable to revoke API key",
+      );
+    } finally {
+      setDeveloperApiLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!authUser) {
+      setDeveloperApi(null);
+      return;
+    }
+
+    loadDeveloperApi();
+  }, [authUser?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2532,17 +2736,266 @@ export default function Home() {
 
                 <button
                   onClick={() => {
-                    setModal({
-                      title: "DEVELOPER API",
-                      message: "The KitSetups Developer API dashboard is being prepared. API access will be available here soon.",
-                    });
+                    setShowDeveloperApi(true);
+                    loadDeveloperApi();
                   }}
-                  className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2 text-[8px] font-bold tracking-[0.12em] text-zinc-400 transition hover:bg-white/[0.06] hover:text-zinc-200"
+                  className="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] px-3 py-2 text-[8px] font-bold tracking-[0.12em] text-cyan-300 transition hover:bg-cyan-400/[0.10] hover:text-cyan-200"
                 >
-                  VIEW
+                  {developerApiLoading ? "..." : "VIEW"}
                 </button>
 
               </div>
+
+              {showDeveloperApi && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+                  <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/[0.08] bg-[#09090b] shadow-2xl">
+
+                    <div className="sticky top-0 z-10 border-b border-white/[0.06] bg-[#09090b]/95 p-5 backdrop-blur">
+                      <div className="flex items-start justify-between gap-4">
+
+                        <div>
+                          <p className="font-mono text-[9px] font-bold tracking-[0.22em] text-cyan-400">
+                            KITSETUPS
+                          </p>
+
+                          <h2 className="mt-1 text-xl font-bold text-white">
+                            Developer API
+                          </h2>
+
+                          <p className="mt-1 text-[10px] leading-5 text-zinc-500">
+                            Connect your application to live KitSetups data.
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => setShowDeveloperApi(false)}
+                          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.03] text-zinc-500 transition hover:bg-white/[0.07] hover:text-white"
+                        >
+                          ×
+                        </button>
+
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 p-5">
+
+                      {developerApiError && (
+                        <div className="rounded-2xl border border-red-400/15 bg-red-400/[0.05] p-4">
+                          <p className="text-[10px] font-semibold text-red-300">
+                            {developerApiError}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* STATUS */}
+                      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-[9px] font-bold tracking-[0.18em] text-zinc-500">
+                              API STATUS
+                            </p>
+
+                            <p className="mt-2 text-sm font-semibold text-white">
+                              {developerApiLoading
+                                ? "Loading..."
+                                : developerApi?.active
+                                  ? "Active"
+                                  : "Not configured"}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`h-2.5 w-2.5 rounded-full ${
+                              developerApi?.active
+                                ? "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]"
+                                : "bg-zinc-700"
+                            }`}
+                          />
+                        </div>
+
+                      </div>
+
+                      {/* KEY */}
+                      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+
+                        <div className="flex items-center justify-between gap-3">
+
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-bold tracking-[0.18em] text-zinc-500">
+                              API KEY
+                            </p>
+
+                            <p className="mt-2 truncate font-mono text-xs text-zinc-300">
+                              {developerApiKey
+                                ? developerApiKey
+                                : developerApi?.active
+                                  ? `${developerApi.prefix || "ks_live_"}••••••••••••`
+                                  : "No API key"}
+                            </p>
+                          </div>
+
+                          {developerApiKey && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(
+                                    developerApiKey,
+                                  );
+
+                                  setModal({
+                                    title: "COPIED",
+                                    message:
+                                      "Your API key has been copied to your clipboard.",
+                                    success: true,
+                                  });
+                                } catch {
+                                  setDeveloperApiError(
+                                    "Could not copy API key. Copy it manually.",
+                                  );
+                                }
+                              }}
+                              className="shrink-0 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] px-3 py-2 text-[8px] font-bold tracking-[0.12em] text-cyan-300"
+                            >
+                              COPY
+                            </button>
+                          )}
+
+                        </div>
+
+                        {!developerApi?.active ? (
+                          <button
+                            disabled={developerApiLoading}
+                            onClick={createDeveloperApiKey}
+                            className="mt-4 w-full rounded-xl bg-cyan-400 px-4 py-3 text-[9px] font-black tracking-[0.16em] text-black transition hover:bg-cyan-300 disabled:opacity-50"
+                          >
+                            {developerApiLoading
+                              ? "CREATING..."
+                              : "CREATE FREE API KEY"}
+                          </button>
+                        ) : (
+                          <button
+                            disabled={developerApiLoading}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  "Revoke this API key? Any application using it will immediately lose access.",
+                                )
+                              ) {
+                                revokeDeveloperApiKey();
+                              }
+                            }}
+                            className="mt-4 w-full rounded-xl border border-red-400/15 bg-red-400/[0.04] px-4 py-3 text-[9px] font-black tracking-[0.16em] text-red-300 transition hover:bg-red-400/[0.08] disabled:opacity-50"
+                          >
+                            {developerApiLoading
+                              ? "REVOCATION..."
+                              : "REVOKE API KEY"}
+                          </button>
+                        )}
+
+                        {developerApiKey && (
+                          <p className="mt-3 text-[9px] leading-4 text-amber-300/70">
+                            Save this key now. For security, KitSetups will not display the full secret again.
+                          </p>
+                        )}
+
+                      </div>
+
+                      {/* USAGE */}
+                      <div className="grid grid-cols-2 gap-3">
+
+                        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                          <p className="text-[8px] font-bold tracking-[0.16em] text-zinc-600">
+                            MONTHLY USAGE
+                          </p>
+
+                          <p className="mt-2 font-mono text-lg font-bold text-white">
+                            {developerApi?.usage?.used ?? 0}
+                            <span className="text-zinc-600">
+                              {" "}/{" "}
+                              {developerApi?.usage?.limit ?? 1000}
+                            </span>
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                          <p className="text-[8px] font-bold tracking-[0.16em] text-zinc-600">
+                            RATE LIMIT
+                          </p>
+
+                          <p className="mt-2 font-mono text-lg font-bold text-white">
+                            {developerApi?.rateLimit?.requestsPerMinute ?? 60}
+                            <span className="ml-1 text-[9px] text-zinc-600">
+                              / min
+                            </span>
+                          </p>
+                        </div>
+
+                      </div>
+
+                      {/* ENDPOINTS */}
+                      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+
+                        <p className="text-[9px] font-bold tracking-[0.18em] text-zinc-500">
+                          ENDPOINTS
+                        </p>
+
+                        <div className="mt-3 space-y-2">
+
+                          {[
+                            "GET /api/v1/signals",
+                            "GET /api/v1/signals/:symbol",
+                            "GET /api/v1/analysis/:symbol",
+                          ].map((endpoint) => (
+                            <div
+                              key={endpoint}
+                              className="rounded-xl border border-white/[0.05] bg-black/20 px-3 py-2.5"
+                            >
+                              <code className="font-mono text-[9px] text-cyan-300">
+                                {endpoint}
+                              </code>
+                            </div>
+                          ))}
+
+                        </div>
+
+                      </div>
+
+                      {/* EXAMPLE */}
+                      <div className="rounded-2xl border border-white/[0.06] bg-black/30 p-4">
+
+                        <p className="text-[9px] font-bold tracking-[0.18em] text-zinc-500">
+                          QUICK START
+                        </p>
+
+                        <pre className="mt-3 overflow-x-auto whitespace-pre-wrap font-mono text-[8px] leading-5 text-zinc-400">
+{`curl https://nart-jnr-1.onrender.com/api/v1/signals \\
+  -H "X-API-Key: ks_live_YOUR_KEY"`}
+                        </pre>
+
+                      </div>
+
+                      {/* LIMITS */}
+                      <div className="rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.025] p-4">
+
+                        <p className="text-[9px] font-bold tracking-[0.18em] text-cyan-300">
+                          FREE TIER
+                        </p>
+
+                        <ul className="mt-3 space-y-2 text-[9px] leading-4 text-zinc-500">
+                          <li>• 1,000 API requests per month</li>
+                          <li>• 60 requests per minute</li>
+                          <li>• Live published signals</li>
+                          <li>• Symbol-specific signals</li>
+                          <li>• Market analysis endpoint</li>
+                        </ul>
+
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* SIGN OUT */}
               <button
@@ -2625,7 +3078,6 @@ export default function Home() {
                 </p>
               </div>
 
-              <LiveBadge />
             </div>
 
             {selectedSetup.premium ? (
