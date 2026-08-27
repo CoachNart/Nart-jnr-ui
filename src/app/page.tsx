@@ -624,19 +624,63 @@ function SetupCard({
                     </p>
                   </div>
 
-                  <div className="flex min-w-0 items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="font-mono text-[8px] font-bold tracking-[0.18em] text-emerald-400">
-                        TAKE PROFIT
-                      </p>
-                      <p className="mt-1 text-[9px] text-zinc-600">
-                        Primary objective
+                  <div className="min-w-0">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-mono text-[8px] font-bold tracking-[0.18em] text-emerald-400">
+                          TAKE PROFITS
+                        </p>
+                        <p className="mt-1 text-[9px] text-zinc-600">
+                          Primary objectives
+                        </p>
+                      </div>
+
+                      <p className="shrink-0 font-mono text-[8px] text-zinc-600">
+                        {Array.isArray(lifecycle.targets)
+                          ? `${lifecycle.targets.length} TARGET${lifecycle.targets.length === 1 ? "" : "S"}`
+                          : "1 TARGET"}
                       </p>
                     </div>
 
-                    <p className="shrink-0 font-mono text-base font-bold text-emerald-300">
-                      {signalLocked ? "••••••" : `$${setup.target}`}
-                    </p>
+                    <div className="mt-3 grid gap-2">
+                      {(Array.isArray(lifecycle.targets) && lifecycle.targets.length > 0
+                        ? lifecycle.targets
+                        : [{ price: setup.target }]
+                      ).map((target, index) => {
+                        const hit = Boolean(target?.hit);
+
+                        return (
+                          <div
+                            key={`tp-${index}`}
+                            className="flex items-center justify-between border border-emerald-400/[0.08] bg-emerald-400/[0.02] px-3 py-2"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[7px] font-bold tracking-[0.14em] text-zinc-600">
+                                TP{index + 1}
+                              </span>
+
+                              {hit && (
+                                <span className="font-mono text-[6px] font-bold tracking-[0.12em] text-emerald-400">
+                                  HIT
+                                </span>
+                              )}
+                            </div>
+
+                            <span
+                              className={`font-mono text-sm font-bold ${
+                                hit
+                                  ? "text-emerald-400"
+                                  : "text-emerald-300"
+                              }`}
+                            >
+                              {signalLocked
+                                ? "••••••"
+                                : `$${target?.price ?? setup.target}`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                 </div>
@@ -1373,6 +1417,7 @@ export default function Home() {
           headers: {
             Authorization: `Bearer ${token}`,
             "X-Nart-User": userId,
+            "X-KitSetups-Device": getDeviceId(),
           },
           cache: "no-store",
           credentials: "include",
