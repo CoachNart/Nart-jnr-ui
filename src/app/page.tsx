@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAuth, useClerk, useUser } from "@clerk/nextjs";
-import { initAnalytics } from "@/lib/firebase";
 
 const KITSETUPS_DEVICE_ID = "kitsetups_device_id";
 
@@ -1286,12 +1285,6 @@ export default function Home() {
   }, [authUser?.id]);
 
   useEffect(() => {
-    initAnalytics().catch((error) => {
-      console.error("❌ Firebase Analytics failed:", error);
-    });
-  }, []);
-
-  useEffect(() => {
     if (!isLoaded) {
       setAuthLoading(true);
       return;
@@ -1685,7 +1678,6 @@ export default function Home() {
           </div>
 
           <p className="mt-5 text-center text-[9px] tracking-[0.08em] text-zinc-700">
-            Secured by Firebase Authentication.
           </p>
         </div>
       </main>
