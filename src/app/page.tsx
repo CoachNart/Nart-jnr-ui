@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth, useClerk, useUser } from "@clerk/nextjs";
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  getIdToken,
+} from "firebase/auth";
+import { auth, googleProvider } from "@/lib/firebase";
 
 const KITSETUPS_DEVICE_ID = "kitsetups_device_id";
 
@@ -979,9 +985,8 @@ function SetupCard({
 
 
 export default function Home() {
-  const { getToken } = useAuth();
-  const { user, isLoaded } = useUser();
-  const { openSignIn, signOut } = useClerk();
+  const [user, setUser] = useState<any>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "home";
@@ -1006,6 +1011,9 @@ export default function Home() {
 
   const [liveSetups, setLiveSetups] =
     useState<NartSetup[]>([]);
+
+  const [selectedSetup, setSelectedSetup] =
+    useState<NartSetup | null>(null);
 
   const [signalLocked, setSignalLocked] =
     useState(false);
@@ -1120,7 +1128,7 @@ export default function Home() {
       setDeveloperApiLoading(true);
       setDeveloperApiError(null);
 
-      const token = await getToken();
+      const token = await getFirebaseToken();
 
       if (!token) {
         throw new Error("Authentication token unavailable");
@@ -1168,7 +1176,7 @@ export default function Home() {
       setDeveloperApiError(null);
       setDeveloperApiKey(null);
 
-      const token = await getToken();
+      const token = await getFirebaseToken();
 
       if (!token) {
         throw new Error("Authentication token unavailable");
@@ -1224,7 +1232,7 @@ export default function Home() {
       setDeveloperApiLoading(true);
       setDeveloperApiError(null);
 
-      const token = await getToken();
+      const token = await getFirebaseToken();
 
       if (!token) {
         throw new Error("Authentication token unavailable");
@@ -1285,40 +1293,45 @@ export default function Home() {
   }, [authUser?.id]);
 
   useEffect(() => {
-    if (!isLoaded) {
-      setAuthLoading(true);
-      return;
-    }
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setIsLoaded(true);
 
-    if (user) {
-      const id = user.id;
+      if (firebaseUser) {
+        const id = firebaseUser.uid;
 
-      setAuthUser({
-        id,
-        email: user.primaryEmailAddress?.emailAddress || "",
-        displayName: user.fullName || user.username || null,
-        photoURL: user.imageUrl || null,
-      });
+        setAuthUser({
+          id,
+          email: firebaseUser.email || "",
+          displayName:
+            firebaseUser.displayName ||
+            firebaseUser.email ||
+            null,
+          photoURL: firebaseUser.photoURL || null,
+        });
 
-      setUserId(id);
-      setAuthError(null);
-    } else {
-      setAuthUser(null);
-      setUserId("");
-      setAccount(null);
-    }
+        setUserId(id);
+        setAuthError(null);
+      } else {
+        setAuthUser(null);
+        setUserId("");
+        setAccount(null);
+      }
 
-    setAuthLoading(false);
-  }, [isLoaded, user]);
+      setAuthLoading(false);
+    });
 
-  async function getClerkToken() {
+    return () => unsubscribe();
+  }, []);
+
+  async function getFirebaseToken() {
     try {
       if (!isLoaded || !user) return null;
 
-      const token = await getToken();
+      const token = await getIdToken(user, true);
       return token || null;
     } catch (error) {
-      console.error("❌ Clerk token retrieval failed:", error);
+      console.error("❌ Firebase token retrieval failed:", error);
       return null;
     }
   }
@@ -1337,16 +1350,25 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           process.env.NEXT_PUBLIC_API_URL;
 
-        const token = await getClerkToken();
+        const token = await getFirebaseToken();
+
+        console.log("🔐 ACCOUNT AUTH CHECK:", {
+          uid: userId,
+          firebaseUser: !!user,
+          isLoaded,
+          hasToken: !!token,
+          tokenLength: token?.length || 0,
+        });
 
         if (!token) {
-          throw new Error("Authentication token unavailable");
+          throw new Error(
+            `AUTH DEBUG: user=${!!user}, loaded=${isLoaded}, uid=${userId || "none"}, token=false`
+          );
         }
 
         const response = await fetch(`${base}/api/account`, {
           headers: {
             Authorization: `Bearer ${token}`,
-            "X-Nart-User": userId,
             "X-KitSetups-Device": getDeviceId() || "",
           },
           cache: "no-store",
@@ -1396,7 +1418,7 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           process.env.NEXT_PUBLIC_API_URL;
 
-        const token = await getClerkToken();
+        const token = await getFirebaseToken();
 
         console.log("KITSETUPS AUTH DEBUG:", {
           uid: userId,
@@ -1412,7 +1434,6 @@ export default function Home() {
         const response = await fetch(`${base}/api/analysis`, {
           headers: {
             Authorization: `Bearer ${token}`,
-            "X-Nart-User": userId,
             "X-KitSetups-Device": getDeviceId() || "",
           },
           cache: "no-store",
@@ -1465,7 +1486,7 @@ export default function Home() {
           process.env.NEXT_PUBLIC_NART_API ||
           process.env.NEXT_PUBLIC_API_URL;
 
-        const token = await getClerkToken();
+        const token = await getFirebaseToken();
 
         console.log("KITSETUPS AUTH DEBUG:", {
           uid: userId,
@@ -1485,7 +1506,7 @@ export default function Home() {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
-            "X-Nart-User": userId,
+            "X-KitSetups-Device": getDeviceId() || "",
           },
           cache: "no-store",
           credentials: "include",
@@ -1550,11 +1571,10 @@ export default function Home() {
   async function loginWithGoogle() {
     try {
       setAuthError(null);
-      await openSignIn({
-        fallbackRedirectUrl: "/",
-      });
+
+      await signInWithPopup(auth, googleProvider);
     } catch (error) {
-      console.error("❌ Clerk sign-in failed:", error);
+      console.error("❌ Firebase Google sign-in failed:", error);
 
       if (error instanceof Error) {
         setAuthError(error.message);
@@ -1566,122 +1586,15 @@ export default function Home() {
 
   async function logout() {
     try {
-      await signOut({
-        redirectUrl: "/",
-      });
+      await firebaseSignOut(auth);
     } catch (error) {
-      console.error("❌ Clerk logout failed:", error);
+      console.error("❌ Firebase logout failed:", error);
     }
 
     setAuthUser(null);
     setUserId("");
     setAccount(null);
     setTab("home");
-  }
-
-  const [selectedSetup, setSelectedSetup] =
-    useState<(typeof setups)[number] | null>(null);
-
-  // Keep the active section when the browser reloads.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const savedTab = window.sessionStorage.getItem("kitsetups-tab");
-
-    if (
-      savedTab === "home" ||
-      savedTab === "setups" ||
-      savedTab === "analysis" ||
-      savedTab === "profile"
-    ) {
-      setTab(savedTab as Tab);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.sessionStorage.setItem("kitsetups-tab", tab);
-  }, [tab]);
-
-
-  if (authLoading) {
-    return (
-      <main className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-6">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-7 w-7 animate-spin rounded-full border-2 border-white/10 border-t-cyan-400" />
-          <p className="text-[10px] font-semibold tracking-[0.2em] text-zinc-500">
-            KitSetups
-          </p>
-          <p className="mt-2 text-xs text-zinc-700">
-            Checking your session...
-          </p>
-        </div>
-
-<style jsx global>{`
-  @keyframes scan {
-    0% {
-      transform: translateX(-150%);
-      opacity: 0;
-    }
-    20% {
-      opacity: 1;
-    }
-    80% {
-      opacity: 1;
-    }
-    100% {
-      transform: translateX(350%);
-      opacity: 0;
-    }
-  }
-`}</style>
-
-</main>
-    );
-  }
-
-  if (!authUser) {
-    return (
-      <main className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-5">
-        <div className="w-full max-w-sm">
-          <div className="mb-10">
-            <p className="text-[9px] font-bold tracking-[0.28em] text-cyan-400/70">
-              KITSETUPS
-            </p>
-
-            <h1 className="mt-3 text-4xl font-black tracking-tight">
-              Welcome back.
-            </h1>
-
-            <p className="mt-3 text-sm leading-6 text-zinc-500">
-              Sign in to access your market intelligence.
-            </p>
-          </div>
-
-          <div className="rounded-[28px] border border-white/[0.07] bg-white/[0.025] p-5 shadow-2xl">
-            <button
-              type="button"
-              onClick={loginWithGoogle}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-4 text-[10px] font-black tracking-[0.12em] text-zinc-200 transition hover:bg-white/[0.06]"
-            >
-              <span className="text-base font-bold">G</span>
-              CONTINUE WITH GOOGLE
-            </button>
-
-            {authError && (
-              <div className="mt-4 rounded-2xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3">
-                <p className="text-xs leading-5 text-red-300/80">
-                  {authError}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <p className="mt-5 text-center text-[9px] tracking-[0.08em] text-zinc-700">
-          </p>
-        </div>
-      </main>
-    );
   }
 
   const goTo = (next: Tab) => {
@@ -1824,8 +1737,72 @@ export default function Home() {
   });
 
 
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-6">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-7 w-7 animate-spin rounded-full border-2 border-white/10 border-t-cyan-400" />
+          <p className="text-[10px] font-semibold tracking-[0.2em] text-zinc-500">
+            KitSetups
+          </p>
+          <p className="mt-2 text-xs text-zinc-700">
+            Checking your session...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <main className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-5">
+        <div className="w-full max-w-sm">
+          <div className="mb-10">
+            <p className="text-[9px] font-bold tracking-[0.28em] text-cyan-400/70">
+              KITSETUPS
+            </p>
+
+            <h1 className="mt-3 text-4xl font-black tracking-tight">
+              Welcome back.
+            </h1>
+
+            <p className="mt-3 text-sm leading-6 text-zinc-500">
+              Sign in to access your market intelligence.
+            </p>
+          </div>
+
+          <div className="rounded-[28px] border border-white/[0.07] bg-white/[0.025] p-5 shadow-2xl">
+            <button
+              type="button"
+              onClick={loginWithGoogle}
+              disabled={authLoading}
+              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-4 text-[10px] font-black tracking-[0.12em] text-zinc-200 transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="text-base font-bold">G</span>
+              CONTINUE WITH GOOGLE
+            </button>
+
+            {authError && (
+              <div className="mt-4 rounded-2xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3">
+                <p className="text-xs leading-5 text-red-300/80">
+                  {authError}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <p className="mt-5 text-center text-[9px] tracking-[0.08em] text-zinc-700">
+            Sign in securely with your Google account.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#030506] pt-[73px] text-zinc-100">
+      {authUser && (
+
       <div className="relative z-10 mx-auto min-h-screen max-w-6xl px-4 pb-28 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute left-1/2 top-[-180px] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-cyan-400/[0.045] blur-[120px]" />
         <div className="pointer-events-none absolute right-[-180px] top-[30%] h-[300px] w-[300px] rounded-full bg-blue-500/[0.035] blur-[110px]" />
@@ -3022,7 +2999,7 @@ export default function Home() {
                 onClick={async () => {
                   try {
                     setAuthLoading(true);
-                    await signOut({ redirectUrl: "/" });
+                    await logout();
                   } catch (error) {
                     console.error("❌ Sign out failed:", error);
                     setAuthError(
@@ -3402,6 +3379,7 @@ export default function Home() {
           ))}
         </nav>
       </div>
+    )}
     </main>
   );
 }
