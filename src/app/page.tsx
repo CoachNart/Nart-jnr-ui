@@ -1423,8 +1423,11 @@ export default function Home() {
         console.log("KITSETUPS AUTH DEBUG:", {
           uid: userId,
           email: authUser.email,
+          firebaseLoaded: isLoaded,
+          firebaseUser: !!user,
           hasToken: !!token,
           tokenLength: token?.length || 0,
+          apiBase: base,
         });
 
         if (!token) {
