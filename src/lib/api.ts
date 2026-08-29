@@ -2,9 +2,7 @@ const API_BASE =
   process.env.NEXT_PUBLIC_KITSETUPS_API?.replace(/\/+$/, "");
 
 if (!API_BASE) {
-  throw new Error(
-    "NEXT_PUBLIC_KITSETUPS_API is not configured"
-  );
+  throw new Error("NEXT_PUBLIC_KITSETUPS_API is not configured");
 }
 
 export function kitsetupsApi(path: string): string {
@@ -18,7 +16,6 @@ export async function kitsetupsFetch(
   return fetch(kitsetupsApi(path), {
     ...options,
     cache: "no-store",
-    credentials: "include",
   });
 }
 

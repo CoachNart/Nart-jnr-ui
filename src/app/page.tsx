@@ -1010,6 +1010,9 @@ export default function Home() {
   const [liveAnalysis, setLiveAnalysis] =
     useState<NartAnalysis | null>(null);
 
+  const [analysisLoading, setAnalysisLoading] =
+    useState(false);
+
   const [analysisError, setAnalysisError] =
     useState<string | null>(null);
 
@@ -1401,194 +1404,156 @@ export default function Home() {
     };
   }, [userId]);
 
-  useEffect(() => {
-    let cancelled = false;
+    useEffect(() => {
+      let cancelled = false;
 
-    async function loadAnalysis() {
-      if (!authUser) {
-        if (!cancelled) {
-          setLiveAnalysis(null);
+      async function loadAnalysis() {
+        if (!authUser) {
+          if (!cancelled) {
+            setLiveAnalysis(null);
+          }
+          return;
         }
-        return;
-      }
 
-      try {
-        const token = await getFirebaseToken();
-
-          let tokenDebug = null;
-
-          if (token) {
-            try {
-              const parts = token.split(".");
-              if (parts.length === 3) {
-                const payload = JSON.parse(
-                  atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
-                );
-
-                tokenDebug = {
-                  iss: payload.iss || null,
-                  aud: payload.aud || null,
-                  sub: payload.sub || null,
-                  exp: payload.exp || null,
-                  expDate: payload.exp
-                    ? new Date(payload.exp * 1000).toISOString()
-                    : null,
-                };
-              }
-            } catch {
-              tokenDebug = { decodeError: true };
-            }
+        try {
+          if (!cancelled) {
+            setAnalysisLoading(true);
+            setAnalysisError(null);
           }
 
-          console.log("KITSETUPS TOKEN META:", tokenDebug);
+          const token = await getFirebaseToken();
 
-        console.log("KITSETUPS AUTH DEBUG:", {
-          uid: userId,
-          email: authUser.email,
-          firebaseLoaded: isLoaded,
-          firebaseUser: !!user,
-          hasToken: !!token,
-          tokenLength: token?.length || 0,
-        });
+          if (!token) {
+            throw new Error("Authentication token unavailable");
+          }
 
-        if (!token) {
-          throw new Error("Authentication token unavailable");
-        }
-
-        const response = await kitsetupsAuthFetch(
-          "/api/analysis",
-          token,
-          {
-            headers: {
-              "X-KitSetups-Device": getDeviceId() || "",
+          const response = await kitsetupsAuthFetch(
+            "/api/analysis",
+            token,
+            {
+              method: "GET",
+              headers: {
+                "X-KitSetups-Device": getDeviceId() || "",
+              },
             },
-          },
-        );
-
-        const payload = await response.json();
-
-        if (!cancelled) {
-        }
-
-        if (!response.ok || !payload.ok) {
-          throw new Error(
-            payload.error ||
-            `Analysis API returned ${response.status}`
           );
-        }
 
-        if (!cancelled) {
-          setLiveAnalysis(payload.data);
-        }
-      } catch (error) {
-        console.error("❌ Analysis loading failed:", error);
+          const payload = await response.json();
 
-        if (!cancelled) {
-          setLiveAnalysis(null);
-          setAnalysisError(
-            error instanceof Error
-              ? error.message
-              : "Analysis failed to load"
-          );
+          if (!response.ok || !payload.ok) {
+            throw new Error(
+              payload.error ||
+              `Analysis API returned ${response.status}`
+            );
+          }
+
+          if (!cancelled) {
+            setLiveAnalysis(payload.data);
+          }
+        } catch (error) {
+          console.error("❌ Analysis loading failed:", error);
+
+          if (!cancelled) {
+            setLiveAnalysis(null);
+            setAnalysisError(
+              error instanceof Error
+                ? error.message
+                : "Analysis failed to load"
+            );
+          }
+        } finally {
+          if (!cancelled) {
+            setAnalysisLoading(false);
+          }
         }
       }
-    }
 
-    async function loadSignals() {
-      if (!authUser) {
-        if (!cancelled) {
-          setLiveSetups([]);
-          setApiLoading(false);
-        }
-        return;
-      }
-
-      try {
-        setApiLoading(true);
-        setApiError(null);
-
-        const token = await getFirebaseToken();
-
-        console.log("KITSETUPS AUTH DEBUG:", {
-          uid: userId,
-          email: authUser.email,
-          hasToken: !!token,
-          tokenLength: token?.length || 0,
-        });
-
-        if (!token) {
-          throw new Error("Authentication token unavailable");
+      async function loadSignals() {
+        if (!authUser) {
+          if (!cancelled) {
+            setLiveSetups([]);
+            setSignalLocked(false);
+            setTrialEndsAt(null);
+          }
+          return;
         }
 
-        if (!cancelled) {
-        }
+        try {
+          if (!cancelled) {
+            setApiLoading(true);
+            setApiError(null);
+          }
 
-        const response = await kitsetupsAuthFetch(
-          "/api/signals",
-          token,
-          {
-            method: "GET",
-            headers: {
-              "X-KitSetups-Device": getDeviceId() || "",
+          const token = await getFirebaseToken();
+
+          if (!token) {
+            throw new Error("Authentication token unavailable");
+          }
+
+          const response = await kitsetupsAuthFetch(
+            "/api/signals",
+            token,
+            {
+              method: "GET",
+              headers: {
+                "X-KitSetups-Device": getDeviceId() || "",
+              },
             },
-          },
-        );
-
-        const payload = await response.json();
-
-        if (!response.ok || !payload.ok) {
-          throw new Error(
-            payload.error ||
-            `Signals API returned ${response.status}`
           );
-        }
 
-        const signals = Array.isArray(payload.data?.signals)
-          ? payload.data.signals
-          : [];
+          const payload = await response.json();
 
-        const locked = payload.data?.locked === true;
+          if (!response.ok || !payload.ok) {
+            throw new Error(
+              payload.error ||
+              `Signals API returned ${response.status}`
+            );
+          }
 
-        const trialEnd =
-          typeof payload.data?.trialEndsAt === "string"
-            ? payload.data.trialEndsAt
-            : null;
+          const signals = Array.isArray(payload.data?.signals)
+            ? payload.data.signals
+            : [];
 
-        if (!cancelled) {
-          setLiveSetups(signals);
-          setSignalLocked(locked);
-          setTrialEndsAt(trialEnd);
-          setApiError(null);
-        }
-      } catch (error) {
-        console.error("❌ Signal loading failed:", error);
+          const locked = payload.data?.locked === true;
 
-        if (!cancelled) {
-          setLiveSetups([]);
-          setSignalLocked(false);
-          setTrialEndsAt(null);
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Failed to load signals";
+          const trialEnd =
+            typeof payload.data?.trialEndsAt === "string"
+              ? payload.data.trialEndsAt
+              : null;
 
-          setApiError(message);
+          if (!cancelled) {
+            setLiveSetups(signals);
+            setSignalLocked(locked);
+            setTrialEndsAt(trialEnd);
+            setApiError(null);
+          }
+        } catch (error) {
+          console.error("❌ Signal loading failed:", error);
 
-        }
-      } finally {
-        if (!cancelled) {
-          setApiLoading(false);
+          if (!cancelled) {
+            setLiveSetups([]);
+            setSignalLocked(false);
+            setTrialEndsAt(null);
+            setApiError(
+              error instanceof Error
+                ? error.message
+                : "Failed to load signals"
+            );
+          }
+        } finally {
+          if (!cancelled) {
+            setApiLoading(false);
+          }
         }
       }
-    }
 
-    loadAnalysis();
-    loadSignals();
+      loadAnalysis();
+      loadSignals();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [authUser, userId, user]);
+      return () => {
+        cancelled = true;
+      };
+    }, [authUser, userId, user]);
 
   async function loginWithGoogle() {
     try {
@@ -2434,7 +2399,7 @@ export default function Home() {
                 </div>
 
                 <p className="mt-4 text-xs font-semibold text-zinc-400">
-                  {apiLoading
+                  {analysisLoading
                     ? "Synchronizing BTC intelligence..."
                     : analysisError
                       ? `Analysis: ${analysisError}`
