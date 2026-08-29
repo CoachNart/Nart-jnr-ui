@@ -1319,7 +1319,7 @@ export default function Home() {
   }, []);
 
   async function getFirebaseToken(
-    firebaseUser = user,
+    firebaseUser = auth.currentUser,
   ) {
     try {
       if (!firebaseUser) {
@@ -1397,9 +1397,7 @@ export default function Home() {
 
     loadAccount();
 
-    return (
-
-) => {
+    return () => {
       cancelled = true;
     };
   }, [userId]);
