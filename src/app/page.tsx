@@ -1360,8 +1360,6 @@ export default function Home() {
           hasToken: !!token,
           tokenLength: token?.length || 0,
         });
-          setAuthError(`TOKEN: ${token ? "YES" : "NO"} | UID: ${userId || "NONE"}`);
-
 
         if (!token) {
           throw new Error(
@@ -1420,7 +1418,6 @@ export default function Home() {
             setAnalysisLoading(true);
             setAnalysisError(null);
           }
-
 
           const token = await getFirebaseToken();
 
