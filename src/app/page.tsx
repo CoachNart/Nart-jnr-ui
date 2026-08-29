@@ -1315,14 +1315,23 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  async function getFirebaseToken() {
+  async function getFirebaseToken(
+    firebaseUser = user,
+  ) {
     try {
-      const currentUser = auth.currentUser;
+      if (!firebaseUser) {
+        console.warn("⚠️ No authenticated Firebase user available");
+        return null;
+      }
 
-      if (!currentUser) return null;
+      const token = await getIdToken(firebaseUser);
 
-      const token = await getIdToken(currentUser, true);
-      return token || null;
+      if (!token) {
+        console.warn("⚠️ Firebase returned an empty ID token");
+        return null;
+      }
+
+      return token;
     } catch (error) {
       console.error("❌ Firebase token retrieval failed:", error);
       return null;
@@ -1579,7 +1588,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [authUser, userId]);
+  }, [authUser, userId, user]);
 
   async function loginWithGoogle() {
     try {
