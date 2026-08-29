@@ -1368,7 +1368,7 @@ export default function Home() {
         }
 
         const response = await kitsetupsAuthFetch(
-          "/api/account",
+          "/api/v2/account",
           token,
           {
             headers: {
@@ -1426,7 +1426,7 @@ export default function Home() {
           }
 
           const response = await kitsetupsAuthFetch(
-            "/api/analysis",
+            "/api/v2/analysis/BTCUSDT",
             token,
             {
               method: "GET",
@@ -1489,7 +1489,7 @@ export default function Home() {
           }
 
           const response = await kitsetupsAuthFetch(
-            "/api/signals",
+            "/api/v2/signals",
             token,
             {
               method: "GET",
