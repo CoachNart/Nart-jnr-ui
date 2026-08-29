@@ -8,6 +8,10 @@ import {
   getIdToken,
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
+import {
+  kitsetupsApi,
+  kitsetupsAuthFetch,
+} from "@/lib/api";
 
 const KITSETUPS_DEVICE_ID = "kitsetups_device_id";
 
@@ -1117,10 +1121,6 @@ export default function Home() {
   const [authError, setAuthError] =
     useState<string | null>(null);
 
-  const getDeveloperApiBase = () =>
-    process.env.NEXT_PUBLIC_NART_API ||
-    process.env.NEXT_PUBLIC_API_URL;
-
   const loadDeveloperApi = async () => {
     if (!authUser) return;
 
@@ -1134,14 +1134,9 @@ export default function Home() {
         throw new Error("Authentication token unavailable");
       }
 
-      const response = await fetch(
-        `${getDeveloperApiBase()}/api/developer/key`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: "no-store",
-        },
+      const response = await kitsetupsAuthFetch(
+        "/api/developer/key",
+        token,
       );
 
       const payload = await response.json();
@@ -1182,13 +1177,11 @@ export default function Home() {
         throw new Error("Authentication token unavailable");
       }
 
-      const response = await fetch(
-        `${getDeveloperApiBase()}/api/developer/key`,
+      const response = await kitsetupsAuthFetch(
+        "/api/developer/key",
+        token,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         },
       );
 
@@ -1238,13 +1231,11 @@ export default function Home() {
         throw new Error("Authentication token unavailable");
       }
 
-      const response = await fetch(
-        `${getDeveloperApiBase()}/api/developer/key`,
+      const response = await kitsetupsAuthFetch(
+        "/api/developer/key",
+        token,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         },
       );
 
@@ -1346,10 +1337,6 @@ export default function Home() {
       }
 
       try {
-        const base =
-          process.env.NEXT_PUBLIC_NART_API ||
-          process.env.NEXT_PUBLIC_API_URL;
-
         const token = await getFirebaseToken();
 
         console.log("🔐 ACCOUNT AUTH CHECK:", {
@@ -1366,14 +1353,15 @@ export default function Home() {
           );
         }
 
-        const response = await fetch(`${base}/api/account`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "X-KitSetups-Device": getDeviceId() || "",
+        const response = await kitsetupsAuthFetch(
+          "/api/account",
+          token,
+          {
+            headers: {
+              "X-KitSetups-Device": getDeviceId() || "",
+            },
           },
-          cache: "no-store",
-          credentials: "include",
-        });
+        );
 
         const payload = await response.json();
 
@@ -1414,11 +1402,34 @@ export default function Home() {
       }
 
       try {
-        const base =
-          process.env.NEXT_PUBLIC_NART_API ||
-          process.env.NEXT_PUBLIC_API_URL;
-
         const token = await getFirebaseToken();
+
+          let tokenDebug = null;
+
+          if (token) {
+            try {
+              const parts = token.split(".");
+              if (parts.length === 3) {
+                const payload = JSON.parse(
+                  atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+                );
+
+                tokenDebug = {
+                  iss: payload.iss || null,
+                  aud: payload.aud || null,
+                  sub: payload.sub || null,
+                  exp: payload.exp || null,
+                  expDate: payload.exp
+                    ? new Date(payload.exp * 1000).toISOString()
+                    : null,
+                };
+              }
+            } catch {
+              tokenDebug = { decodeError: true };
+            }
+          }
+
+          console.log("KITSETUPS TOKEN META:", tokenDebug);
 
         console.log("KITSETUPS AUTH DEBUG:", {
           uid: userId,
@@ -1427,21 +1438,21 @@ export default function Home() {
           firebaseUser: !!user,
           hasToken: !!token,
           tokenLength: token?.length || 0,
-          apiBase: base,
         });
 
         if (!token) {
           throw new Error("Authentication token unavailable");
         }
 
-        const response = await fetch(`${base}/api/analysis`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "X-KitSetups-Device": getDeviceId() || "",
+        const response = await kitsetupsAuthFetch(
+          "/api/analysis",
+          token,
+          {
+            headers: {
+              "X-KitSetups-Device": getDeviceId() || "",
+            },
           },
-          cache: "no-store",
-          credentials: "include",
-        });
+        );
 
         const payload = await response.json();
 
@@ -1485,10 +1496,6 @@ export default function Home() {
         setApiLoading(true);
         setApiError(null);
 
-        const base =
-          process.env.NEXT_PUBLIC_NART_API ||
-          process.env.NEXT_PUBLIC_API_URL;
-
         const token = await getFirebaseToken();
 
         console.log("KITSETUPS AUTH DEBUG:", {
@@ -1505,15 +1512,16 @@ export default function Home() {
         if (!cancelled) {
         }
 
-        const response = await fetch(`${base}/api/signals`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "X-KitSetups-Device": getDeviceId() || "",
+        const response = await kitsetupsAuthFetch(
+          "/api/signals",
+          token,
+          {
+            method: "GET",
+            headers: {
+              "X-KitSetups-Device": getDeviceId() || "",
+            },
           },
-          cache: "no-store",
-          credentials: "include",
-        });
+        );
 
         const payload = await response.json();
 
@@ -2657,21 +2665,26 @@ export default function Home() {
                       }
 
                       try {
-                        const base =
-                          process.env.NEXT_PUBLIC_NART_API ||
-                          process.env.NEXT_PUBLIC_API_URL;
+                        const token =
+                          await getFirebaseToken();
+
+                        if (!token) {
+                          throw new Error(
+                            "Authentication token unavailable"
+                          );
+                        }
 
                         const response =
-                          await fetch(
-                            `${base}/api/payment/verify`,
+                          await kitsetupsAuthFetch(
+                            "/api/payment/verify",
+                            token,
                             {
                               method: "POST",
                               headers: {
-                                "Content-Type": "application/json",
-                                "x-nart-user": userId,
+                                "Content-Type":
+                                  "application/json",
                               },
                               body: JSON.stringify({
-                                user: userId,
                                 txHash,
                               }),
                             }
@@ -2969,7 +2982,7 @@ export default function Home() {
                         </p>
 
                         <pre className="mt-3 overflow-x-auto whitespace-pre-wrap font-mono text-[8px] leading-5 text-zinc-400">
-{`curl ${process.env.NEXT_PUBLIC_API_URL}/api/v1/signals \\
+{`curl ${process.env.NEXT_PUBLIC_KITSETUPS_API}/api/v1/signals \\
   -H "X-API-Key: ks_live_YOUR_KEY"`}
                         </pre>
 
