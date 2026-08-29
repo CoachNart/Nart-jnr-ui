@@ -1317,9 +1317,11 @@ export default function Home() {
 
   async function getFirebaseToken() {
     try {
-      if (!isLoaded || !user) return null;
+      const currentUser = auth.currentUser;
 
-      const token = await getIdToken(user, true);
+      if (!currentUser) return null;
+
+      const token = await getIdToken(currentUser, true);
       return token || null;
     } catch (error) {
       console.error("❌ Firebase token retrieval failed:", error);
