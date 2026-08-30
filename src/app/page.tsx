@@ -2255,6 +2255,35 @@ export default function Home() {
                   onOpen={() => setSelectedSetup(setup)}
                 />
               ))}
+
+                <a
+                  href="/signals/history"
+                  className="group flex min-h-[180px] flex-col justify-between rounded-3xl border border-cyan-400/10 bg-cyan-400/[0.025] p-5 transition hover:border-cyan-400/25 hover:bg-cyan-400/[0.05]"
+                >
+                  <div>
+                    <p className="font-mono text-[8px] font-black tracking-[0.22em] text-cyan-400/70">
+                      TRACK RECORD
+                    </p>
+
+                    <h2 className="mt-3 text-lg font-black text-white">
+                      Signal History
+                    </h2>
+
+                    <p className="mt-2 text-xs leading-5 text-zinc-500">
+                      Review published setups and track how they performed.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-between">
+                    <span className="font-mono text-[8px] font-bold tracking-[0.16em] text-zinc-600">
+                      VIEW FULL RECORD
+                    </span>
+
+                    <span className="text-zinc-400 transition group-hover:translate-x-1">
+                      →
+                    </span>
+                  </div>
+                </a>
             </div>
           </section>
           </>
