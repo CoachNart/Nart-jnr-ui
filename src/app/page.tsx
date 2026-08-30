@@ -1368,11 +1368,11 @@ export default function Home() {
         }
 
         const response = await kitsetupsAuthFetch(
-          "/api/v2/account",
+          "/api/account",
           token,
           {
             headers: {
-              "X-KitSetups-Device": getDeviceId() || "",
+              "X-Device-ID": getDeviceId() || "",
             },
           },
         );
@@ -1426,12 +1426,12 @@ export default function Home() {
           }
 
           const response = await kitsetupsAuthFetch(
-            "/api/v2/analysis/BTCUSDT",
+            "/api/analysis?symbol=BTCUSDT",
             token,
             {
               method: "GET",
               headers: {
-                "X-KitSetups-Device": getDeviceId() || "",
+                "X-Device-ID": getDeviceId() || "",
               },
             },
           );
@@ -1489,12 +1489,12 @@ export default function Home() {
           }
 
           const response = await kitsetupsAuthFetch(
-            "/api/v2/signals",
+            "/api/signals",
             token,
             {
               method: "GET",
               headers: {
-                "X-KitSetups-Device": getDeviceId() || "",
+                "X-Device-ID": getDeviceId() || "",
               },
             },
           );
@@ -2930,9 +2930,9 @@ export default function Home() {
                         <div className="mt-3 space-y-2">
 
                           {[
-                            "GET /api/v1/signals",
-                            "GET /api/v1/signals/:symbol",
-                            "GET /api/v1/analysis/:symbol",
+                            "GET /api/signals",
+                            "GET /api/signals/:symbol",
+                            "GET /api/analysis?symbol=:symbol",
                           ].map((endpoint) => (
                             <div
                               key={endpoint}
@@ -2956,7 +2956,7 @@ export default function Home() {
                         </p>
 
                         <pre className="mt-3 overflow-x-auto whitespace-pre-wrap font-mono text-[8px] leading-5 text-zinc-400">
-{`curl ${process.env.NEXT_PUBLIC_KITSETUPS_API}/api/v1/signals \\
+{`curl ${process.env.NEXT_PUBLIC_KITSETUPS_API}/api/signals \\
   -H "X-API-Key: ks_live_YOUR_KEY"`}
                         </pre>
 
