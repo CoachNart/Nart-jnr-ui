@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = "http://127.0.0.1:8787";
+const BACKEND_URL =
+  process.env.KITSETUPS_BACKEND_URL ||
+  "https://kitsetups-backend.onrender.com";
 
 async function proxy(
   request: NextRequest,
@@ -20,10 +22,10 @@ async function proxy(
    * Therefore:
    *
    *   /api/kitsetups/api/signals
-   *        -> http://127.0.0.1:8787/api/signals
+   *        -> ${BACKEND_URL}/api/signals
    *
    *   /api/kitsetups/api/analysis
-   *        -> http://127.0.0.1:8787/api/analysis
+   *        -> ${BACKEND_URL}/api/analysis
    */
   const backendPath = `/${path.join("/")}`;
   const target = `${BACKEND_URL}${backendPath}${request.nextUrl.search}`;

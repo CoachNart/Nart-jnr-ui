@@ -443,10 +443,10 @@ function SetupCard({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-mono text-[8px] font-bold tracking-[0.18em] text-amber-300">
-                    FREE ACCESS ENDED
+                    PREMIUM ACCESS REQUIRED
                   </p>
                   <p className="mt-1 text-[10px] leading-5 text-zinc-500">
-                    Your 3-day trial has ended. Execution levels are locked.
+                    Signal intelligence is available. Execution levels are locked.
                   </p>
                 </div>
 
@@ -576,7 +576,9 @@ function SetupCard({
 
           </div>
 
-          {!watchOnly && executionStatus && hasExecutionLevels && (
+          {!watchOnly &&
+              executionStatus &&
+              (hasExecutionLevels || signalLocked) && (
             <>
               {/* EXECUTION MAP */}
               <div className="mt-7">
