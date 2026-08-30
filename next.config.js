@@ -4,7 +4,9 @@ const nextConfig = {
     return [
       {
         source: "/api/kitsetups/:path*",
-        destination: "http://127.0.0.1:8787/:path*",
+        destination:
+          process.env.KITSETUPS_BACKEND_URL ||
+          "https://kitsetups-backend.onrender.com/:path*",
       },
     ];
   },
