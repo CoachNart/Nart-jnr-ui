@@ -1127,6 +1127,9 @@ export default function Home() {
   const [authError, setAuthError] =
     useState<string | null>(null);
 
+  const [accountGateNotice, setAccountGateNotice] =
+    useState<string | null>(null);
+
   const loadDeveloperApi = async () => {
     if (!authUser) return;
 
@@ -1387,7 +1390,8 @@ export default function Home() {
 
           if (
             !response.ok &&
-            payload.code !== "ACCOUNT_EXISTS"
+            payload.code !== "ACCOUNT_EXISTS" &&
+            payload.code !== "DEVICE_ALREADY_REGISTERED"
           ) {
             throw new Error(
               payload.error ||
@@ -1397,14 +1401,32 @@ export default function Home() {
 
           if (
             response.status === 409 &&
-            payload.code === "ACCOUNT_EXISTS"
+            (
+              payload.code === "ACCOUNT_EXISTS" ||
+              payload.code === "DEVICE_ALREADY_REGISTERED"
+            )
           ) {
-            response = await kitsetupsFetch(
-              "/api/account",
-              token,
-            );
+            if (!cancelled) {
+              setAccountGateNotice(
+                payload.code === "DEVICE_ALREADY_REGISTERED"
+                  ? "This device already has a KitSetups account. Please sign in with the account already connected to this device."
+                  : "You already have a KitSetups account. Please sign in with your existing account.",
+              );
+            }
 
-            payload = await response.json();
+            if (payload.code === "ACCOUNT_EXISTS") {
+              response = await kitsetupsFetch(
+                "/api/account",
+                token,
+              );
+
+              payload = await response.json();
+            } else {
+              if (!cancelled) {
+                setAccount(null);
+              }
+              return;
+            }
           }
         }
 
@@ -1598,6 +1620,7 @@ export default function Home() {
   async function loginWithGoogle() {
     try {
       setAuthError(null);
+      setAccountGateNotice(null);
       setAuthLoading(true);
 
       const credential = await signInWithPopup(auth, googleProvider);
@@ -1865,6 +1888,25 @@ export default function Home() {
       {authUser && (
 
       <div className="relative z-10 mx-auto min-h-screen max-w-6xl px-4 pb-28 sm:px-6 lg:px-8">
+        {accountGateNotice && (
+          <div className="mb-6 rounded-2xl border border-amber-400/15 bg-amber-400/[0.05] px-4 py-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-amber-400/20 bg-amber-400/[0.08] text-amber-300">
+                !
+              </div>
+
+              <div>
+                <p className="font-mono text-[9px] font-black tracking-[0.16em] text-amber-300">
+                  EXISTING ACCOUNT
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-400">
+                  {accountGateNotice}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="pointer-events-none absolute left-1/2 top-[-180px] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-cyan-400/[0.045] blur-[120px]" />
         <div className="pointer-events-none absolute right-[-180px] top-[30%] h-[300px] w-[300px] rounded-full bg-blue-500/[0.035] blur-[110px]" />
         {/* HEADER */}
