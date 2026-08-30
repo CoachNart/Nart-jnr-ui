@@ -1,34 +1,23 @@
-const API_BASE =
-  process.env.NEXT_PUBLIC_KITSETUPS_API?.replace(/\/+$/, "");
-
-if (!API_BASE) {
-  throw new Error("NEXT_PUBLIC_KITSETUPS_API is not configured");
-}
+const API_PREFIX = "/api/kitsetups";
 
 export function kitsetupsApi(path: string): string {
-  return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${API_PREFIX}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 export async function kitsetupsFetch(
   path: string,
+  token?: string,
   options: RequestInit = {},
 ): Promise<Response> {
+  const headers = new Headers(options.headers);
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
   return fetch(kitsetupsApi(path), {
     ...options,
+    headers,
     cache: "no-store",
-  });
-}
-
-export async function kitsetupsAuthFetch(
-  path: string,
-  token: string,
-  options: RequestInit = {},
-): Promise<Response> {
-  return kitsetupsFetch(path, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      Authorization: `Bearer ${token}`,
-    },
   });
 }

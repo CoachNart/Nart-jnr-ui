@@ -8,9 +8,10 @@ import {
   getIdToken,
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
+
 import {
   kitsetupsApi,
-  kitsetupsAuthFetch,
+  kitsetupsFetch,
 } from "@/lib/api";
 
 const KITSETUPS_DEVICE_ID = "kitsetups_device_id";
@@ -1137,7 +1138,7 @@ export default function Home() {
         throw new Error("Authentication token unavailable");
       }
 
-      const response = await kitsetupsAuthFetch(
+      const response = await kitsetupsFetch(
         "/api/developer/key",
         token,
       );
@@ -1180,7 +1181,7 @@ export default function Home() {
         throw new Error("Authentication token unavailable");
       }
 
-      const response = await kitsetupsAuthFetch(
+      const response = await kitsetupsFetch(
         "/api/developer/key",
         token,
         {
@@ -1234,7 +1235,7 @@ export default function Home() {
         throw new Error("Authentication token unavailable");
       }
 
-      const response = await kitsetupsAuthFetch(
+      const response = await kitsetupsFetch(
         "/api/developer/key",
         token,
         {
@@ -1353,45 +1354,80 @@ export default function Home() {
       try {
         const token = await getFirebaseToken();
 
-        console.log("🔐 ACCOUNT AUTH CHECK:", {
-          uid: userId,
-          firebaseUser: !!user,
-          isLoaded,
-          hasToken: !!token,
-          tokenLength: token?.length || 0,
-        });
-
         if (!token) {
-          throw new Error(
-            `AUTH DEBUG: user=${!!user}, loaded=${isLoaded}, uid=${userId || "none"}, token=false`
-          );
+          throw new Error("Authentication token unavailable");
         }
 
-        const response = await kitsetupsAuthFetch(
+        let response = await kitsetupsFetch(
           "/api/account",
           token,
-          {
-            headers: {
-              "X-Device-ID": getDeviceId() || "",
-            },
-          },
         );
 
-        const payload = await response.json();
+        let payload = await response.json();
 
+        if (
+          response.status === 404 &&
+          payload.code === "ACCOUNT_NOT_FOUND"
+        ) {
+          response = await kitsetupsFetch(
+            "/api/auth/register",
+            token,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-KitSetups-Device": getDeviceId(),
+              },
+            },
+          );
+
+          payload = await response.json();
+
+          if (
+            !response.ok &&
+            payload.code !== "ACCOUNT_EXISTS"
+          ) {
+            throw new Error(
+              payload.error ||
+              "Unable to create KitSetups account",
+            );
+          }
+
+          if (
+            response.status === 409 &&
+            payload.code === "ACCOUNT_EXISTS"
+          ) {
+            response = await kitsetupsFetch(
+              "/api/account",
+              token,
+            );
+
+            payload = await response.json();
+          }
+        }
 
         if (!response.ok || !payload.ok) {
           throw new Error(
             payload.error ||
-            `Account API returned ${response.status}`
+            `Account API returned ${response.status}`,
           );
         }
 
         if (!cancelled) {
           setAccount(payload.data);
+          setAuthError(null);
         }
       } catch (error) {
         console.error("❌ Account loading failed:", error);
+
+        if (!cancelled) {
+          setAccount(null);
+          setAuthError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load your KitSetups account",
+          );
+        }
       }
     }
 
@@ -1406,7 +1442,7 @@ export default function Home() {
       let cancelled = false;
 
       async function loadAnalysis() {
-        if (!authUser) {
+        if (!authUser || !account) {
           if (!cancelled) {
             setLiveAnalysis(null);
           }
@@ -1425,13 +1461,13 @@ export default function Home() {
             throw new Error("Authentication token unavailable");
           }
 
-          const response = await kitsetupsAuthFetch(
+          const response = await kitsetupsFetch(
             "/api/analysis?symbol=BTCUSDT",
             token,
             {
               method: "GET",
               headers: {
-                "X-Device-ID": getDeviceId() || "",
+                "X-KitSetups-Device": getDeviceId(),
               },
             },
           );
@@ -1467,7 +1503,7 @@ export default function Home() {
       }
 
       async function loadSignals() {
-        if (!authUser) {
+        if (!authUser || !account) {
           if (!cancelled) {
             setLiveSetups([]);
             setSignalLocked(false);
@@ -1488,13 +1524,13 @@ export default function Home() {
             throw new Error("Authentication token unavailable");
           }
 
-          const response = await kitsetupsAuthFetch(
+          const response = await kitsetupsFetch(
             "/api/signals",
             token,
             {
               method: "GET",
               headers: {
-                "X-Device-ID": getDeviceId() || "",
+                "X-KitSetups-Device": getDeviceId(),
               },
             },
           );
@@ -1512,11 +1548,15 @@ export default function Home() {
             ? payload.data.signals
             : [];
 
-          const locked = payload.data?.locked === true;
+          const access = payload.data?.access;
+
+          const locked =
+            access?.accessLocked === true ||
+            access?.hasAccess === false;
 
           const trialEnd =
-            typeof payload.data?.trialEndsAt === "string"
-              ? payload.data.trialEndsAt
+            typeof access?.expiresAt === "string"
+              ? access.expiresAt
               : null;
 
           if (!cancelled) {
@@ -1551,21 +1591,55 @@ export default function Home() {
       return () => {
         cancelled = true;
       };
-    }, [authUser, userId, user]);
+    }, [authUser, userId, user, account]);
 
   async function loginWithGoogle() {
     try {
       setAuthError(null);
+      setAuthLoading(true);
 
-      await signInWithPopup(auth, googleProvider);
+      const credential = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = credential.user;
+
+      const token = await getIdToken(firebaseUser);
+
+      if (!token) {
+        throw new Error("Authentication token unavailable");
+      }
+
+      const response = await kitsetupsFetch(
+        "/api/auth/register",
+        token,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-KitSetups-Device": getDeviceId(),
+          },
+        },
+      );
+
+      const payload = await response.json();
+
+      if (!response.ok && payload.code !== "ACCOUNT_EXISTS") {
+        throw new Error(
+          payload.error || "Unable to create KitSetups account",
+        );
+      }
+
+      if (payload.ok && payload.data) {
+        setAccount(payload.data);
+      }
     } catch (error) {
-      console.error("❌ Firebase Google sign-in failed:", error);
+      console.error("❌ KitSetups sign-in failed:", error);
 
       if (error instanceof Error) {
         setAuthError(error.message);
       } else {
         setAuthError("Sign-in failed. Please try again.");
       }
+    } finally {
+      setAuthLoading(false);
     }
   }
 
@@ -2649,7 +2723,7 @@ export default function Home() {
                         }
 
                         const response =
-                          await kitsetupsAuthFetch(
+                          await kitsetupsFetch(
                             "/api/payment/verify",
                             token,
                             {
