@@ -1032,6 +1032,35 @@ export default function Home() {
   const [trialEndsAt, setTrialEndsAt] =
     useState<string | null>(null);
 
+  const [trialNow, setTrialNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setTrialNow(Date.now());
+    }, 60_000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+  const trialEndMs = trialEndsAt ? new Date(trialEndsAt).getTime() : 0;
+  const trialDurationMs = 3 * 24 * 60 * 60 * 1000;
+  const trialStartMs = trialEndMs
+    ? trialEndMs - trialDurationMs
+    : 0;
+
+  const trialProgress = trialEndMs
+    ? Math.min(
+        100,
+        Math.max(
+          0,
+          ((trialNow - trialStartMs) / trialDurationMs) * 100,
+        ),
+      )
+    : 0;
+
+  const trialHoursRemaining = trialEndMs
+    ? Math.max(0, Math.ceil((trialEndMs - trialNow) / (60 * 60 * 1000)))
+    : 0;
+
 
   const [apiLoading, setApiLoading] =
     useState(true);
@@ -2638,14 +2667,16 @@ export default function Home() {
                     </p>
 
                     <p className="mt-1 font-mono text-sm font-bold text-cyan-300">
-                      {account?.plan === "premium"
-                        ? "UNLIMITED"
-                        : account?.accessLocked
-                          ? "LOCKED"
-                          : account?.trialActive
-                            ? "ACTIVE"
-                            : "—"}
-                    </p>
+                        {account?.plan === "premium"
+                          ? "UNLIMITED"
+                          : account?.accessLocked
+                            ? "LOCKED"
+                            : account?.trialActive
+                              ? trialHoursRemaining >= 24
+                                ? `${Math.floor(trialHoursRemaining / 24)}d ${trialHoursRemaining % 24}h`
+                                : `${trialHoursRemaining}h`
+                              : "—"}
+                      </p>
                   </div>
 
                 </div>
