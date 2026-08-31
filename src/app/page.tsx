@@ -690,7 +690,7 @@ function SetupCard({
                             >
                               {signalLocked
                                 ? "••••••"
-                                : `$${target?.price ?? setup.target}`}
+                                : formatPrice(target?.price ?? setup.target)}
                             </span>
                           </div>
                         );
@@ -990,6 +990,19 @@ function SetupCard({
 }
 
 
+
+function formatPrice(value: unknown) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return String(value ?? "—");
+  }
+
+  return number.toLocaleString("en-US", {
+    maximumFractionDigits: 8,
+    useGrouping: false,
+  });
+}
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
