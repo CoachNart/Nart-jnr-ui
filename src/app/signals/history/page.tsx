@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getIdToken } from "firebase/auth";
+import { getIdToken, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 type Signal = {
@@ -29,13 +29,19 @@ export default function SignalHistoryPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadHistory() {
-      try {
-        const user = auth.currentUser;
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (cancelled) return;
 
-        if (!user) {
-          throw new Error("Please sign in to view signal history.");
-        }
+      if (!user) {
+        setSignals([]);
+        setError("Please sign in to view signal history.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError("");
 
         const token = await getIdToken(user);
 
@@ -74,12 +80,11 @@ export default function SignalHistoryPage() {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }
-
-    loadHistory();
+    });
 
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 

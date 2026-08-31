@@ -47,7 +47,7 @@ function getDeviceId(): string {
 
 type Tab = "home" | "setups" | "analysis" | "profile";
 
-type NartSetup = {
+type KitSetup = {
   symbol?: string;
   pair?: string;
 
@@ -122,7 +122,7 @@ type NartSetup = {
   generatedAt?: string;
 };
 
-type NartAnalysis = {
+type KitAnalysis = {
   symbol: string;
   price: number | string;
   market?: unknown;
@@ -147,7 +147,7 @@ type NartAnalysis = {
 };
 
 
-const setups: NartSetup[] = [
+const setups: KitSetup[] = [
   {
     pair: "BTCUSDT",
     side: "LONG",
@@ -1011,7 +1011,7 @@ export default function Home() {
     useState<string>("");
 
   const [liveAnalysis, setLiveAnalysis] =
-    useState<NartAnalysis | null>(null);
+    useState<KitAnalysis | null>(null);
 
   const [analysisLoading, setAnalysisLoading] =
     useState(false);
@@ -1020,10 +1020,10 @@ export default function Home() {
     useState<string | null>(null);
 
   const [liveSetups, setLiveSetups] =
-    useState<NartSetup[]>([]);
+    useState<KitSetup[]>([]);
 
   const [selectedSetup, setSelectedSetup] =
-    useState<NartSetup | null>(null);
+    useState<KitSetup | null>(null);
 
   const [signalLocked, setSignalLocked] =
     useState(false);
@@ -3215,7 +3215,7 @@ export default function Home() {
             </div>
 
             {selectedSetup.premium ? (
-              <div className="nart-premium-glow overflow-hidden rounded-3xl border border-amber-400/15 bg-gradient-to-br from-amber-400/[0.07] via-cyan-400/[0.025] to-transparent p-6">
+              <div className="kitsetups-premium-glow overflow-hidden rounded-3xl border border-amber-400/15 bg-gradient-to-br from-amber-400/[0.07] via-cyan-400/[0.025] to-transparent p-6">
 
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-400/10 text-xl">
                   ◆
@@ -3252,7 +3252,7 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <div className="nart-glow nart-card rounded-3xl border border-white/[0.06] p-5">
+                <div className="kitsetups-glow kitsetups-card rounded-3xl border border-white/[0.06] p-5">
 
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <Metric
@@ -3290,7 +3290,7 @@ export default function Home() {
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
 
-                  <div className="nart-card rounded-3xl border border-white/[0.06] p-5">
+                  <div className="kitsetups-card rounded-3xl border border-white/[0.06] p-5">
                     <p className="text-[9px] font-bold tracking-[0.18em] text-cyan-400/70">
                       MARKET STRUCTURE
                     </p>
@@ -3306,7 +3306,7 @@ export default function Home() {
                     </p>
                   </div>
 
-                  <div className="nart-card rounded-3xl border border-white/[0.06] p-5">
+                  <div className="kitsetups-card rounded-3xl border border-white/[0.06] p-5">
                     <p className="text-[9px] font-bold tracking-[0.18em] text-cyan-400/70">
                       LIQUIDITY
                     </p>
@@ -3324,7 +3324,7 @@ export default function Home() {
 
                 </div>
 
-                <div className="nart-card mt-4 rounded-3xl border border-cyan-400/[0.08] bg-cyan-400/[0.015] p-5">
+                <div className="kitsetups-card mt-4 rounded-3xl border border-cyan-400/[0.08] bg-cyan-400/[0.015] p-5">
 
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
