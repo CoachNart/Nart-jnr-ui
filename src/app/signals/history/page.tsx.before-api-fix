@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { getIdToken, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { kitsetupsFetch } from "@/lib/api";
 
 type Signal = {
   signalId?: string;
@@ -46,9 +45,13 @@ export default function SignalHistoryPage() {
 
         const token = await getIdToken(user);
 
-        const response = await kitsetupsFetch(
-          "/api/signals/history",
-          token,
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_KITSETUPS_API}/api/signals/history`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
         );
 
         const payload = await response.json();
