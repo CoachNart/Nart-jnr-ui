@@ -125,24 +125,28 @@ type KitSetup = {
 type KitAnalysis = {
   symbol: string;
   price: number | string;
-  market?: unknown;
-  structures?: Record<string, unknown>;
-  alignment?: unknown;
-  weeklyContext?: unknown;
-  tradePlan?: {
-    bias?: string;
-    direction?: string;
-    status?: string;
-    entry?: number | null;
-    stop?: number | null;
-    target?: number | null;
-    riskReward?: number | string | null;
-    reason?: string[];
-    execution?: {
-      required?: boolean;
-      status?: string;
-    };
-  };
+  status?: string;
+  valid?: boolean;
+  direction?: string | null;
+  entry?: number | null;
+  stop?: number | null;
+  targets?: Array<{
+    index?: number;
+    price?: number | null;
+    timeframe?: string | null;
+    type?: string | null;
+    side?: string | null;
+    riskReward?: number | null;
+  }>;
+  riskReward?: number | string | null;
+  quality?: {
+    score?: number | null;
+    grade?: string | null;
+    components?: Record<string, unknown>;
+  } | null;
+  reasons?: string[];
+  evidence?: Record<string, unknown>;
+  lifecycle?: Record<string, unknown>;
   generatedAt?: string;
 };
 
@@ -2081,15 +2085,15 @@ export default function Home() {
 
                   <p
                     className={`mt-1 text-xs font-bold ${
-                      liveAnalysis?.tradePlan?.bias === "bullish"
+                      liveAnalysis?.direction === "LONG"
                         ? "text-emerald-400"
-                        : liveAnalysis?.tradePlan?.bias === "bearish"
+                        : liveAnalysis?.direction === "SHORT"
                           ? "text-red-400"
                           : "text-zinc-400"
                     }`}
                   >
-                    {liveAnalysis?.tradePlan?.bias
-                      ? liveAnalysis.tradePlan.bias.toUpperCase()
+                    {liveAnalysis?.direction
+                      ? liveAnalysis.direction.toUpperCase()
                       : "NEUTRAL"}
                   </p>
                 </div>
@@ -2398,7 +2402,7 @@ export default function Home() {
               </div>
             </div>
 
-            {liveAnalysis?.tradePlan ? (
+            {liveAnalysis ? (
               <div className="space-y-3">
 
                 {/* MARKET OVERVIEW */}
@@ -2408,37 +2412,35 @@ export default function Home() {
 
                     <div className="min-w-0">
                       <p className="font-mono text-[7px] font-bold tracking-[0.18em] text-zinc-600">
-                        BTC PRICE
+                        LIVE MARKET PRICE
                       </p>
 
                       <p className="mt-2 truncate font-mono text-2xl font-bold tracking-tight text-white">
-                        {liveAnalysis?.price != null
+                        {liveAnalysis.price != null
                           ? `$${Number(liveAnalysis.price).toLocaleString()}`
                           : "—"}
                       </p>
 
                       <p className="mt-1 text-[8px] text-zinc-600">
-                        Live market price
+                        Direct market ticker
                       </p>
                     </div>
 
                     <div className="shrink-0 text-right">
                       <p className="font-mono text-[7px] font-bold tracking-[0.18em] text-zinc-600">
-                        MARKET BIAS
+                        DIRECTION
                       </p>
 
                       <p
                         className={`mt-2 text-sm font-black tracking-wide ${
-                          liveAnalysis.tradePlan.bias === "bullish"
+                          liveAnalysis.direction === "LONG"
                             ? "text-emerald-400"
-                            : liveAnalysis.tradePlan.bias === "bearish"
+                            : liveAnalysis.direction === "SHORT"
                               ? "text-red-400"
                               : "text-zinc-300"
                         }`}
                       >
-                        {liveAnalysis.tradePlan.bias
-                          ? liveAnalysis.tradePlan.bias.toUpperCase()
-                          : "NEUTRAL"}
+                        {liveAnalysis.direction || "NEUTRAL"}
                       </p>
                     </div>
 
@@ -2448,21 +2450,21 @@ export default function Home() {
 
                     <div className="rounded-2xl border border-white/[0.05] bg-black/20 p-3">
                       <p className="font-mono text-[7px] tracking-[0.12em] text-zinc-600">
-                        DIRECTION
+                        STATUS
                       </p>
 
                       <p className="mt-2 truncate text-[10px] font-bold text-zinc-200">
-                        {liveAnalysis.tradePlan.direction || "—"}
+                        {liveAnalysis.status || "—"}
                       </p>
                     </div>
 
                     <div className="rounded-2xl border border-white/[0.05] bg-black/20 p-3">
                       <p className="font-mono text-[7px] tracking-[0.12em] text-zinc-600">
-                        STATUS
+                        QUALITY
                       </p>
 
                       <p className="mt-2 truncate text-[10px] font-bold text-zinc-200">
-                        {liveAnalysis.tradePlan.status || "—"}
+                        {liveAnalysis.quality?.grade || "—"}
                       </p>
                     </div>
 
@@ -2472,8 +2474,8 @@ export default function Home() {
                       </p>
 
                       <p className="mt-2 text-[10px] font-bold text-cyan-300">
-                        {liveAnalysis.tradePlan.riskReward != null
-                          ? `${liveAnalysis.tradePlan.riskReward}R`
+                        {liveAnalysis.riskReward != null
+                          ? `${liveAnalysis.riskReward}R`
                           : "—"}
                       </p>
                     </div>
@@ -2485,56 +2487,53 @@ export default function Home() {
                 <div className="rounded-3xl border border-white/[0.07] bg-white/[0.02] p-5">
 
                   <div className="flex items-start justify-between gap-4">
-
                     <div>
                       <p className="font-mono text-[7px] font-bold tracking-[0.18em] text-cyan-400/60">
                         MARKET READ
                       </p>
 
                       <h2 className="mt-2 text-base font-bold tracking-tight text-white">
-                        Why KitSetups is watching BTC
+                        Current {liveAnalysis.symbol || "market"} intelligence
                       </h2>
 
                       <p className="mt-1 text-[9px] leading-5 text-zinc-600">
-                        The current engine read on Bitcoin structure and direction.
+                        Live output from the canonical KitSetups trading engine.
                       </p>
                     </div>
 
                     <div className="hidden shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.025] px-2.5 py-2 sm:block">
                       <span className="font-mono text-[7px] font-bold tracking-[0.12em] text-zinc-500">
-                        BTC
+                        {liveAnalysis.symbol || "—"}
                       </span>
                     </div>
-
                   </div>
 
                   <div className="mt-5 space-y-2">
-                    {(liveAnalysis.tradePlan.reason || []).length > 0 ? (
-                      (liveAnalysis.tradePlan.reason || []).map(
-                        (reason, index) => (
-                          <div
-                            key={index}
-                            className="flex gap-3 rounded-2xl border border-white/[0.045] bg-black/20 px-3.5 py-3"
-                          >
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-cyan-400/[0.06] font-mono text-[7px] font-bold text-cyan-400/70">
-                              {String(index + 1).padStart(2, "0")}
-                            </span>
 
-                            <p className="pt-0.5 text-[10px] leading-5 text-zinc-400">
-                              {reason}
-                            </p>
-                          </div>
-                        )
-                      )
+                    {(liveAnalysis.reasons || []).length > 0 ? (
+                      (liveAnalysis.reasons || []).map((reason, index) => (
+                        <div
+                          key={index}
+                          className="flex gap-3 rounded-2xl border border-white/[0.045] bg-black/20 px-3.5 py-3"
+                        >
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-cyan-400/[0.06] font-mono text-[7px] font-bold text-cyan-400/70">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+
+                          <p className="pt-0.5 text-[10px] leading-5 text-zinc-400">
+                            {reason}
+                          </p>
+                        </div>
+                      ))
                     ) : (
                       <div className="rounded-2xl border border-white/[0.045] bg-black/20 p-4">
                         <p className="text-[10px] text-zinc-600">
-                          No additional reasoning returned by the engine.
+                          No reasoning returned by the engine.
                         </p>
                       </div>
                     )}
-                  </div>
 
+                  </div>
                 </div>
 
                 {/* EXECUTION MAP */}
@@ -2546,7 +2545,7 @@ export default function Home() {
                     </p>
 
                     <p className="mt-1 text-[9px] text-zinc-600">
-                      Engine levels for the current BTC scenario.
+                      Levels calculated from the current engine analysis.
                     </p>
                   </div>
 
@@ -2558,10 +2557,8 @@ export default function Home() {
                       </p>
 
                       <p className="mt-2 truncate font-mono text-[10px] font-bold text-zinc-200">
-                        {liveAnalysis.tradePlan.entry != null
-                          ? `$${Number(
-                              liveAnalysis.tradePlan.entry
-                            ).toLocaleString()}`
+                        {liveAnalysis.entry != null
+                          ? `$${Number(liveAnalysis.entry).toLocaleString()}`
                           : "WAIT"}
                       </p>
                     </div>
@@ -2572,10 +2569,8 @@ export default function Home() {
                       </p>
 
                       <p className="mt-2 truncate font-mono text-[10px] font-bold text-red-300">
-                        {liveAnalysis.tradePlan.stop != null
-                          ? `$${Number(
-                              liveAnalysis.tradePlan.stop
-                            ).toLocaleString()}`
+                        {liveAnalysis.stop != null
+                          ? `$${Number(liveAnalysis.stop).toLocaleString()}`
                           : "WAIT"}
                       </p>
                     </div>
@@ -2586,9 +2581,9 @@ export default function Home() {
                       </p>
 
                       <p className="mt-2 truncate font-mono text-[10px] font-bold text-emerald-300">
-                        {liveAnalysis.tradePlan.target != null
+                        {liveAnalysis.targets?.[0]?.price != null
                           ? `$${Number(
-                              liveAnalysis.tradePlan.target
+                              liveAnalysis.targets[0].price
                             ).toLocaleString()}`
                           : "WAIT"}
                       </p>
@@ -2596,12 +2591,69 @@ export default function Home() {
 
                   </div>
 
+                  {/* TARGETS */}
+                  {(liveAnalysis.targets || []).length > 1 && (
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {(liveAnalysis.targets || []).map((target, index) => (
+                        <div
+                          key={target.index ?? index}
+                          className="rounded-2xl border border-emerald-400/[0.06] bg-emerald-400/[0.012] p-3"
+                        >
+                          <p className="font-mono text-[7px] tracking-[0.12em] text-zinc-600">
+                            TARGET {target.index ?? index + 1}
+                          </p>
+
+                          <p className="mt-2 font-mono text-[10px] font-bold text-emerald-300">
+                            {target.price != null
+                              ? `$${Number(target.price).toLocaleString()}`
+                              : "—"}
+                          </p>
+
+                          {target.riskReward != null && (
+                            <p className="mt-1 text-[8px] text-zinc-600">
+                              {target.riskReward}R
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                 </div>
+
+                {/* QUALITY */}
+                {liveAnalysis.quality && (
+                  <div className="rounded-3xl border border-white/[0.07] bg-white/[0.02] p-5">
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-mono text-[7px] font-bold tracking-[0.18em] text-zinc-600">
+                          ENGINE QUALITY
+                        </p>
+
+                        <p className="mt-2 text-base font-bold text-white">
+                          {liveAnalysis.quality.grade || "UNRATED"}
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="font-mono text-[7px] tracking-[0.12em] text-zinc-600">
+                          SCORE
+                        </p>
+
+                        <p className="mt-2 font-mono text-lg font-bold text-cyan-300">
+                          {liveAnalysis.quality.score ?? "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
 
                 {/* FOOTER STATE */}
                 <div className="flex items-center justify-between px-1 pt-1">
                   <p className="font-mono text-[7px] tracking-[0.14em] text-zinc-700">
-                    KITSETUPS BTC ENGINE
+                    KITSETUPS {liveAnalysis.symbol || "ENGINE"}
                   </p>
 
                   <p className="font-mono text-[7px] tracking-[0.14em] text-zinc-700">
