@@ -292,16 +292,73 @@ function isWatchStatus(status?: string | null) {
   return value === "WATCH" || value === "DEVELOPING";
 }
 
+function getLifecycleStages(
+  status?: string | null,
+) {
+  const value = getSetupStatus(status);
+
+  const stages = [
+    { key: "READY", label: "READY", color: "amber" },
+    { key: "ENTRY_HIT", label: "ENTRY", color: "blue" },
+    { key: "ACTIVE", label: "ACTIVE", color: "violet" },
+    { key: "TP1_HIT", label: "TP1", color: "emerald" },
+    { key: "TP2_HIT", label: "TP2", color: "emerald" },
+    { key: "TP3_HIT", label: "TP3", color: "emerald" },
+  ];
+
+  const order = [
+    "READY",
+    "ENTRY_HIT",
+    "ACTIVE",
+    "TP1_HIT",
+    "TP2_HIT",
+    "TP3_HIT",
+    "TP_HIT",
+    "CLOSED",
+  ];
+
+  const effectiveValue =
+    value === "ARMED"
+      ? "READY"
+      : value === "TP_HIT"
+        ? "TP3_HIT"
+        : value;
+
+  const currentIndex = order.indexOf(effectiveValue);
+
+  return stages.map((stage, index) => {
+    let state: "complete" | "current" | "future" = "future";
+
+    if (currentIndex >= 0) {
+      if (index < currentIndex) {
+        state = "complete";
+      } else if (index === currentIndex) {
+        state = "current";
+      }
+    }
+
+    return {
+      ...stage,
+      state,
+    };
+  });
+}
+
 function isExecutionStatus(status?: string | null) {
   const value = getSetupStatus(status);
 
   return [
     "READY",
     "ARMED",
+    "ENTRY_HIT",
     "ACTIVE",
+    "TP1_HIT",
+    "TP2_HIT",
+    "TP3_HIT",
     "TP_HIT",
     "STOP_LOSS",
     "MISSED",
+    "CLOSED",
     "EXPIRED",
   ].includes(value);
 }
@@ -370,21 +427,34 @@ function SetupCard({
     "TP_HIT",
     "STOP_LOSS",
     "MISSED",
+    "CLOSED",
     "EXPIRED",
   ].includes(lifecycleStatus);
 
   const lifecycleLabel =
-    lifecycleStatus === "TP_HIT"
-      ? "TARGET HIT"
-      : lifecycleStatus === "STOP_LOSS"
-        ? "STOP LOSS"
-        : lifecycleStatus === "MISSED"
-          ? "MISSED"
-          : lifecycleStatus === "EXPIRED"
-            ? "EXPIRED"
-            : lifecycleStatus === "ACTIVE"
-              ? "ENTRY HIT · ACTIVE"
-              : lifecycleStatus;
+    lifecycleStatus === "TP1_HIT"
+      ? "TP1 HIT"
+      : lifecycleStatus === "TP2_HIT"
+        ? "TP2 HIT"
+        : lifecycleStatus === "TP3_HIT"
+          ? "TP3 HIT"
+          : lifecycleStatus === "TP_HIT"
+            ? "TARGET HIT"
+            : lifecycleStatus === "STOP_LOSS"
+              ? "STOP LOSS"
+              : lifecycleStatus === "MISSED"
+                ? "MISSED"
+                : lifecycleStatus === "CLOSED"
+                  ? lifecycle.outcome
+                    ? `CLOSED · ${String(lifecycle.outcome).toUpperCase()}`
+                    : "CLOSED"
+                  : lifecycleStatus === "EXPIRED"
+                    ? "EXPIRED"
+                    : lifecycleStatus === "ENTRY_HIT"
+                      ? "ENTRY HIT"
+                      : lifecycleStatus === "ACTIVE"
+                        ? "ENTRY HIT · ACTIVE"
+                        : lifecycleStatus;
 
   const hasExecutionLevels =
     setup.entry != null &&
@@ -397,6 +467,7 @@ function SetupCard({
     "TP_HIT",
     "STOP_LOSS",
     "MISSED",
+    "CLOSED",
     "EXPIRED",
   ].includes(lifecycleStatus);
 
@@ -735,187 +806,155 @@ function SetupCard({
 
                     <p
                       className={`font-mono text-[8px] font-bold tracking-[0.12em] ${
-                        lifecycleStatus === "TP_HIT"
-                          ? "text-emerald-400"
-                          : lifecycleStatus === "STOP_LOSS"
-                            ? "text-red-400"
-                            : lifecycleStatus === "EXPIRED" ||
-                                lifecycleStatus === "MISSED"
-                              ? "text-zinc-400"
-                              : lifecycleIsActive
-                                ? "text-violet-400"
-                                : "text-amber-300"
+                        lifecycleStatus === "STOP_LOSS"
+                          ? "text-red-400"
+                          : lifecycleStatus === "MISSED" ||
+                              lifecycleStatus === "EXPIRED"
+                            ? "text-zinc-500"
+                            : lifecycleStatus === "CLOSED"
+                              ? lifecycle.outcome === "LOSS"
+                                ? "text-red-400"
+                                : "text-emerald-400"
+                              : ["TP1_HIT", "TP2_HIT", "TP3_HIT", "TP_HIT"].includes(
+                                  lifecycleStatus,
+                                )
+                                ? "text-emerald-400"
+                                : lifecycleStatus === "ACTIVE"
+                                  ? "text-violet-400"
+                                  : lifecycleStatus === "ENTRY_HIT"
+                                    ? "text-blue-400"
+                                    : "text-amber-300"
                       }`}
                     >
                       {lifecycleLabel}
                     </p>
                   </div>
 
-                  {/* PRE-ENTRY / EXPIRED / MISSED */}
-                  {(lifecycleStatus === "EXPIRED" ||
-                    lifecycleStatus === "MISSED" ||
-                    lifecycleIsPreEntry) && (
-                    <div className="mt-3 flex items-center gap-2 overflow-hidden">
+                  {(() => {
+                    const stages = getLifecycleStages(lifecycleStatus);
 
-                      <span className="font-mono text-[7px] font-bold text-amber-300">
-                        ● READY
-                      </span>
+                    const terminal =
+                      lifecycleStatus === "STOP_LOSS" ||
+                      lifecycleStatus === "MISSED" ||
+                      lifecycleStatus === "EXPIRED" ||
+                      lifecycleStatus === "CLOSED";
 
-                      <span className="text-[8px] text-zinc-800">→</span>
+                    return (
+                      <div className="mt-4">
+                        <div className="flex items-start">
 
-                      <span
-                        className={`font-mono text-[7px] font-bold ${
-                          lifecycleStatus === "EXPIRED" ||
-                          lifecycleStatus === "MISSED"
-                            ? "text-zinc-500"
-                            : "text-blue-400"
-                        }`}
-                      >
-                        {lifecycleStatus === "EXPIRED"
-                          ? "NOT REACHED"
-                          : lifecycleStatus === "MISSED"
-                            ? "NOT REACHED"
-                            : "WAITING"}
-                      </span>
+                          {stages.map((stage, index) => {
+                            const isCurrent = stage.state === "current";
+                            const isComplete = stage.state === "complete";
 
-                      {(lifecycleStatus === "EXPIRED" ||
-                        lifecycleStatus === "MISSED") && (
-                        <>
-                          <span className="text-[8px] text-zinc-800">→</span>
+                            const dot =
+                              stage.color === "amber"
+                                ? isCurrent
+                                  ? "bg-amber-300 ring-4 ring-amber-300/10"
+                                  : isComplete
+                                    ? "bg-amber-400"
+                                    : "bg-zinc-800"
+                                : stage.color === "blue"
+                                  ? isCurrent
+                                    ? "bg-blue-400 ring-4 ring-blue-400/10"
+                                    : isComplete
+                                      ? "bg-blue-400"
+                                      : "bg-zinc-800"
+                                  : stage.color === "violet"
+                                    ? isCurrent
+                                      ? "bg-violet-400 ring-4 ring-violet-400/10"
+                                      : isComplete
+                                        ? "bg-violet-400"
+                                        : "bg-zinc-800"
+                                    : isCurrent
+                                      ? "bg-emerald-400 ring-4 ring-emerald-400/10"
+                                      : isComplete
+                                        ? "bg-emerald-400"
+                                        : "bg-zinc-800";
 
-                          <span
-                            className={`font-mono text-[7px] font-bold ${
-                              lifecycleStatus === "EXPIRED"
-                                ? "text-zinc-400"
-                                : "text-zinc-400"
+                            const label =
+                              isCurrent
+                                ? stage.color === "emerald"
+                                  ? "text-emerald-400"
+                                  : stage.color === "violet"
+                                    ? "text-violet-400"
+                                    : stage.color === "blue"
+                                      ? "text-blue-400"
+                                      : "text-amber-300"
+                                : isComplete
+                                  ? "text-zinc-400"
+                                  : "text-zinc-700";
+
+                            return (
+                              <div
+                                key={stage.key}
+                                className="flex min-w-0 flex-1 items-start"
+                              >
+                                <div className="flex flex-col items-center">
+                                  <span
+                                    className={`h-2.5 w-2.5 rounded-full transition-all duration-500 ${dot}`}
+                                  />
+
+                                  <span
+                                    className={`mt-2 whitespace-nowrap font-mono text-[6px] font-bold tracking-[0.08em] transition-colors duration-500 ${label}`}
+                                  >
+                                    {stage.label}
+                                  </span>
+                                </div>
+
+                                {index < stages.length - 1 && (
+                                  <div
+                                    className={`mt-[5px] mx-1 h-px flex-1 transition-colors duration-500 ${
+                                      isComplete
+                                        ? "bg-emerald-400/50"
+                                        : "bg-zinc-800"
+                                    }`}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+
+                        </div>
+
+                        {terminal && (
+                          <div
+                            className={`mt-3 border px-3 py-2 font-mono text-[6px] font-bold tracking-[0.12em] ${
+                              lifecycleStatus === "STOP_LOSS"
+                                ? "border-red-400/10 bg-red-400/[0.03] text-red-400"
+                                : lifecycleStatus === "CLOSED"
+                                  ? lifecycle.outcome === "LOSS"
+                                    ? "border-red-400/10 bg-red-400/[0.03] text-red-400"
+                                    : "border-emerald-400/10 bg-emerald-400/[0.03] text-emerald-400"
+                                  : "border-zinc-700/30 bg-zinc-900/30 text-zinc-500"
                             }`}
                           >
-                            {lifecycleStatus}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
+                            {lifecycleStatus === "STOP_LOSS"
+                              ? "TRADE TERMINATED · STOP LOSS"
+                              : lifecycleStatus === "MISSED"
+                                ? "SIGNAL EXPIRED · ENTRY NOT REACHED"
+                                : lifecycleStatus === "EXPIRED"
+                                  ? "SIGNAL EXPIRED"
+                                  : lifecycle.outcome
+                                    ? `TRADE CLOSED · ${String(lifecycle.outcome).toUpperCase()}`
+                                    : "TRADE CLOSED"}
+                          </div>
+                        )}
 
-                  {/* ACTIVE TRADE */}
-                  {entryHit &&
-                    lifecycleStatus !== "TP_HIT" &&
-                    lifecycleStatus !== "STOP_LOSS" &&
-                    lifecycleStatus !== "EXPIRED" &&
-                    lifecycleStatus !== "MISSED" && (
-                      <div className="mt-3 flex items-center gap-2 overflow-hidden">
+                        {totalTargets > 0 && !terminal && (
+                          <div className="mt-3 flex items-center justify-between">
+                            <span className="font-mono text-[6px] tracking-[0.12em] text-zinc-600">
+                              TARGET PROGRESS
+                            </span>
 
-                        <span className="font-mono text-[7px] font-bold text-amber-300">
-                          ● READY
-                        </span>
-
-                        <span className="text-[8px] text-zinc-800">→</span>
-
-                        <span className="font-mono text-[7px] font-bold text-blue-400">
-                          ● ENTRY
-                        </span>
-
-                        <span className="text-[8px] text-zinc-800">→</span>
-
-                        <span className="font-mono text-[7px] font-bold text-violet-400">
-                          ● ACTIVE
-                        </span>
-
-                        <span className="text-[8px] text-zinc-800">→</span>
-
-                        <span className="font-mono text-[7px] font-bold text-zinc-600">
-                          TARGETS
-                        </span>
-
-                        <span className="text-[8px] text-zinc-800">→</span>
-
-                        <span className="font-mono text-[7px] font-bold text-zinc-600">
-                          OPEN
-                        </span>
-
+                            <span className="font-mono text-[6px] font-bold tracking-[0.12em] text-emerald-400">
+                              TP {hitTargets}/{totalTargets}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
-
-                  {/* TAKE PROFIT */}
-                  {lifecycleStatus === "TP_HIT" && (
-                    <div className="mt-3 flex items-center gap-2 overflow-hidden">
-
-                      <span className="font-mono text-[7px] font-bold text-amber-300">
-                        ● READY
-                      </span>
-
-                      <span className="text-[8px] text-zinc-800">→</span>
-
-                      <span className="font-mono text-[7px] font-bold text-blue-400">
-                        ● ENTRY
-                      </span>
-
-                      <span className="text-[8px] text-zinc-800">→</span>
-
-                      <span className="font-mono text-[7px] font-bold text-violet-400">
-                        ● ACTIVE
-                      </span>
-
-                      <span className="text-[8px] text-zinc-800">→</span>
-
-                      <span className="font-mono text-[7px] font-bold text-emerald-400">
-                        ● TARGET
-                      </span>
-
-                      <span className="text-[8px] text-zinc-800">→</span>
-
-                      <span className="font-mono text-[7px] font-bold text-emerald-400">
-                        ● PROFIT
-                      </span>
-
-                    </div>
-                  )}
-
-                  {/* STOP LOSS */}
-                  {lifecycleStatus === "STOP_LOSS" && (
-                    <div className="mt-3 flex items-center gap-2 overflow-hidden">
-
-                      <span className="font-mono text-[7px] font-bold text-amber-300">
-                        ● READY
-                      </span>
-
-                      <span className="text-[8px] text-zinc-800">→</span>
-
-                      <span className="font-mono text-[7px] font-bold text-blue-400">
-                        ● ENTRY
-                      </span>
-
-                      <span className="text-[8px] text-zinc-800">→</span>
-
-                      <span className="font-mono text-[7px] font-bold text-violet-400">
-                        ● ACTIVE
-                      </span>
-
-                      <span className="text-[8px] text-zinc-800">→</span>
-
-                      <span className="font-mono text-[7px] font-bold text-red-400">
-                        ● STOP
-                      </span>
-
-                      <span className="text-[8px] text-zinc-800">→</span>
-
-                      <span className="font-mono text-[7px] font-bold text-red-400">
-                        ● LOSS
-                      </span>
-
-                    </div>
-                  )}
-
-                  {/* TARGET PROGRESS */}
-                  {totalTargets > 0 &&
-                    lifecycleStatus !== "TP_HIT" &&
-                    lifecycleStatus !== "STOP_LOSS" &&
-                    lifecycleStatus !== "EXPIRED" &&
-                    lifecycleStatus !== "MISSED" && (
-                      <div className="mt-2 font-mono text-[6px] tracking-[0.12em] text-emerald-400">
-                        TP {hitTargets}/{totalTargets}
-                      </div>
-                    )}
+                    );
+                  })()}
 
                 </div>
               )}
