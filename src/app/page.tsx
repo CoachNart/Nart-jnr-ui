@@ -1681,8 +1681,13 @@ export default function Home() {
       loadAnalysis();
       loadSignals();
 
+      const signalsTimer = window.setInterval(() => {
+        loadSignals();
+      }, 15_000);
+
       return () => {
         cancelled = true;
+        window.clearInterval(signalsTimer);
       };
     }, [authUser, userId, user, account]);
 
