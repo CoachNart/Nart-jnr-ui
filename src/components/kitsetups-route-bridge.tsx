@@ -1,31 +1,28 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import Home from "@/app/page";
 
 type KitSetupsTab = "home" | "setups" | "analysis" | "profile";
 
 const STORAGE_KEY = "kitsetups-tab";
 
+/**
+ * Compatibility shell for the section routes while the dashboard UI remains
+ * in the canonical Home component.
+ *
+ * Unlike the old bridge, this does NOT redirect back to "/". The App Router
+ * route remains the browser URL, so /setups, /analysis and /profile survive
+ * refreshes and deep links. The canonical dashboard still owns the existing
+ * auth, data loading and visual UI.
+ */
 export default function KitSetupsRouteBridge({
   tab,
 }: {
   tab: Exclude<KitSetupsTab, "home">;
 }) {
-  const router = useRouter();
-
-  useEffect(() => {
+  if (typeof window !== "undefined") {
     sessionStorage.setItem(STORAGE_KEY, tab);
-    router.replace("/");
-  }, [router, tab]);
+  }
 
-  return (
-    <main className="min-h-screen bg-[#030506] text-zinc-100" aria-busy="true">
-      <div className="flex min-h-screen items-center justify-center">
-        <span className="font-mono text-[9px] font-bold tracking-[0.2em] text-zinc-600">
-          LOADING KITSETUPS
-        </span>
-      </div>
-    </main>
-  );
+  return <Home />;
 }
