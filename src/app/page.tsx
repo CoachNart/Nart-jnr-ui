@@ -1,1 +1,1 @@
-// ROUTING REFACTOR PENDING — preserve existing page implementation.
+// RESTORE FROM PREVIOUS COMMIT
