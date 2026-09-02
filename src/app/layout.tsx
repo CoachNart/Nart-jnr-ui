@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import KitSetupsUrlSync from "@/components/kitsetups-url-sync";
 
 export const metadata: Metadata = {
   title: "KitSetups — Trading Intelligence",
@@ -35,7 +36,10 @@ export default function RootLayout({
 }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <KitSetupsUrlSync />
+        {children}
+      </body>
     </html>
   );
 }
