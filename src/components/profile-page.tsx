@@ -15,7 +15,7 @@ function dateMs(value: unknown){if(!value)return 0;if(value instanceof Date)retu
 
 export default function ProfilePage(){
   const[user,setUser]=useState<User|null>(auth.currentUser),[account,setAccount]=useState<Account|null>(null),[loading,setLoading]=useState(true),[copied,setCopied]=useState(false),[now,setNow]=useState(Date.now()),[txHash,setTxHash]=useState(""),[verifyState,setVerifyState]=useState("");
-  useEffect(()=>{let active=true;let unsubscribe=()=>{};const boot=async()=>{await auth.authStateReady();if(!active)return;const u=auth.currentUser;setUser(u);if(!u){setLoading(false);return}try{const token=await u.getIdToken();const r=await kitsetupsAuthFetch("/api/account",token);if(r.ok){const d=await r.json();if(active)setAccount(d.data||null)}else{console.warn("Profile account request failed",r.status)}}catch(error){console.warn("Profile account request failed",error)}finally{if(active)setLoading(false)}unsubscribe=onAuthStateChanged(auth,(next)=>{if(!active)return;setUser(next);if(next)setLoading(false)})};void boot();return()=>{active=false;unsubscribe()}},[]);
+  useEffect(()=>{let active=true;let unsubscribe=()=>{};const boot=async()=>{await auth.authStateReady();if(!active)return;const u=auth.currentUser;setUser(u);if(!u){setLoading(false);return}try{const token=await u.getIdToken(true);const r=await kitsetupsAuthFetch("/api/account",token);if(r.ok){const d=await r.json();if(active)setAccount(d.data||null)}else{console.warn("Profile account request failed",r.status)}}catch(error){console.warn("Profile account request failed",error)}finally{if(active)setLoading(false)}unsubscribe=onAuthStateChanged(auth,(next)=>{if(!active)return;setUser(next);if(next)setLoading(false)})};void boot();return()=>{active=false;unsubscribe()}},[]);
   useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(id)},[]);
   const createdAt=useMemo(()=>dateMs(account?.createdAt)||dateMs(account?.trialStartedAt)||now,[account,now]);
   const trialUntil=useMemo(()=>dateMs(account?.accessExpiresAt)||dateMs(account?.access?.expiresAt)||dateMs(account?.trialEndsAt)||((dateMs(account?.trialStartedAt)||createdAt)+3*24*60*60*1000),[account,createdAt]);
@@ -23,7 +23,10 @@ export default function ProfilePage(){
   const premiumActive=(account?.access?.status==="PREMIUM_ACTIVE"||account?.plan==="premium"||account?.planName==="Premium")&&premiumUntil>now;
   const serverHasAccess=account?.access?.hasAccess===true;
   const serverTrialActive=account?.access?.status==="TRIAL_ACTIVE"||account?.accessStatus==="TRIAL_ACTIVE"||account?.trialActive===true;
-  const freeActive=!premiumActive&&(serverHasAccess||serverTrialActive)&&trialUntil>now;
+  // The server-issued expiry is authoritative. If it is still in the future,
+  // keep the trial active even if an older cached boolean/status says locked.
+  const futureTrialWindow=trialUntil>now&&!premiumActive;
+  const freeActive=!premiumActive&&(serverHasAccess||serverTrialActive||futureTrialWindow)&&trialUntil>now;
   const target=premiumActive?premiumUntil:trialUntil;
   const left=countdown(target);
   const plan=premiumActive?"PREMIUM":freeActive?"FREE TRIAL":"EXPIRED";
