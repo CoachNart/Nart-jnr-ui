@@ -27,6 +27,38 @@ function isJsonResponse(response: Response) {
     .includes("application/json");
 }
 
+function normalizeSignal(signal: any) {
+  if (!signal || typeof signal !== "object") return signal;
+
+  const quality = signal.quality && typeof signal.quality === "object"
+    ? signal.quality
+    : null;
+
+  const lifecycle = signal.lifecycle && typeof signal.lifecycle === "object"
+    ? signal.lifecycle
+    : null;
+
+  return {
+    ...signal,
+    pair: signal.pair || signal.symbol || "UNKNOWN",
+    direction: signal.direction || signal.side || null,
+    grade: signal.grade || quality?.grade || null,
+    score: signal.score ?? quality?.score ?? null,
+    confidence:
+      signal.confidence ||
+      (quality?.score != null ? `${quality.score}%` : null),
+    thesis:
+      signal.thesis ||
+      (Array.isArray(signal.reason) ? signal.reason.join(" • ") : signal.reason) ||
+      "KitSetups is monitoring this market.",
+    signalState:
+      signal.signalState ||
+      lifecycle?.status ||
+      signal.status ||
+      "WAIT",
+  };
+}
+
 async function normalizeSignalsResponse(response: Response): Promise<Response> {
   if (!isJsonResponse(response)) return response;
   if (!response.url.includes("/api/signals")) return response;
@@ -36,31 +68,32 @@ async function normalizeSignalsResponse(response: Response): Promise<Response> {
     const data = payload?.data;
 
     if (payload?.ok && data) {
-      const fallback = Array.isArray(data.scanResults)
-        ? data.scanResults
-        : [];
+      const source = Array.isArray(data.signals)
+        ? data.signals
+        : Array.isArray(data.scanResults)
+          ? data.scanResults
+          : [];
 
-      if (!Array.isArray(data.signals)) {
-        const normalized = {
-          ...payload,
-          data: {
-            ...data,
-            signals: fallback,
-            scanResults: Array.isArray(data.scanResults)
-              ? data.scanResults
-              : fallback,
-          },
-        };
+      const signals = source.map(normalizeSignal);
+      const normalized = {
+        ...payload,
+        data: {
+          ...data,
+          signals,
+          scanResults: Array.isArray(data.scanResults)
+            ? data.scanResults.map(normalizeSignal)
+            : signals,
+        },
+      };
 
-        return new Response(JSON.stringify(normalized), {
-          status: response.status,
-          statusText: response.statusText,
-          headers: response.headers,
-        });
-      }
+      return new Response(JSON.stringify(normalized), {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
     }
   } catch {
-    // Leave the original response untouched; the caller will report JSON errors.
+    // Leave the original response untouched; callers handle malformed JSON.
   }
 
   return response;
@@ -91,8 +124,6 @@ export async function kitsetupsFetch(
         credentials: "same-origin",
       });
 
-      // GET requests can bypass a broken Next proxy and talk directly to the
-      // Render backend. This keeps market data flowing after a frontend deploy.
       if (method === "GET" && FALLBACK_STATUSES.has(response.status)) {
         try {
           response = await fetch(directBackendApi(path), {
