@@ -1,9 +1,8 @@
-const API_BASE =
-  process.env.NEXT_PUBLIC_KITSETUPS_API?.replace(/\/+$/, "");
-
-if (!API_BASE) {
-  throw new Error("NEXT_PUBLIC_KITSETUPS_API is not configured");
-}
+const API_BASE = (
+  process.env.NEXT_PUBLIC_KITSETUPS_API ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  ""
+).replace(/\/+$/, "");
 
 export function kitsetupsApi(path: string): string {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
