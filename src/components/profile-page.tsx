@@ -4,19 +4,17 @@ import { Clock3, Copy, KeyRound, LogOut, ShieldCheck, UserRound, Wallet, Loader2
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import StandaloneShell from "./standalone-shell";
-import { kitsetupsApi } from "../lib/api";
+import { kitsetupsAuthFetch } from "../lib/api";
 
-const API_BASE=kitsetupsApi("");
 const PREMIUM_MS=30*24*60*60*1000;
 const PAYMENT_ADDRESS=process.env.NEXT_PUBLIC_BNB_USDT_PAYMENT_ADDRESS||"";
-
 type Account={displayName?:string;email?:string;photoURL?:string|null;createdAt?:string;trialEndsAt?:string;plan?:string;planName?:string;subscriptionEndsAt?:string;accessStatus?:string;accessLocked?:boolean;accessExpiresAt?:string|null};
 function countdown(target:number){const ms=Math.max(0,target-Date.now());const total=Math.floor(ms/1000);return{ms,days:Math.floor(total/86400),hours:Math.floor(total%86400/3600),minutes:Math.floor(total%3600/60),seconds:total%60}}
 function formatAddress(v:string){return v?v.slice(0,7)+"…"+v.slice(-5):"Payment wallet will appear here"}
 
 export default function ProfilePage(){
-  const[user,setUser]=useState<User|null>(null),[account,setAccount]=useState<Account|null>(null),[loading,setLoading]=useState(true),[copied,setCopied]=useState(false),[now,setNow]=useState(Date.now()),[txHash,setTxHash]=useState(""),[verifyState,setVerifyState]=useState("");
-  useEffect(()=>{const unsubscribe=onAuthStateChanged(auth,async u=>{setUser(u);if(!u){setAccount(null);setLoading(false);return}try{const token=await u.getIdToken();const r=await fetch(`${API_BASE}/api/account`,{headers:{Authorization:`Bearer ${token}`},cache:"no-store"});if(!r.ok){await signOut(auth);setAccount(null);return}const d=await r.json();setAccount(d.data||null)}catch{setAccount(null)}finally{setLoading(false)}});return()=>unsubscribe()},[]);
+  const[user,setUser]=useState<User|null>(auth.currentUser),[account,setAccount]=useState<Account|null>(null),[loading,setLoading]=useState(true),[copied,setCopied]=useState(false),[now,setNow]=useState(Date.now()),[txHash,setTxHash]=useState(""),[verifyState,setVerifyState]=useState("");
+  useEffect(()=>{let active=true;let unsubscribe=()=>{};const boot=async()=>{await auth.authStateReady();if(!active)return;const u=auth.currentUser;setUser(u);if(!u){setLoading(false);return}try{const token=await u.getIdToken();const r=await kitsetupsAuthFetch("/api/account",token);if(r.ok){const d=await r.json();if(active)setAccount(d.data||null)}else{console.warn("Profile account request failed",r.status)}}catch(error){console.warn("Profile account request failed",error)}finally{if(active)setLoading(false)}unsubscribe=onAuthStateChanged(auth,(next)=>{if(!active)return;setUser(next);if(next)setLoading(false)})};void boot();return()=>{active=false;unsubscribe()}},[]);
   useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(id)},[]);
   const createdAt=useMemo(()=>account?.createdAt?new Date(account.createdAt).getTime():now,[account,now]);
   const trialUntil=account?.trialEndsAt?new Date(account.trialEndsAt).getTime():createdAt;
@@ -27,8 +25,8 @@ export default function ProfilePage(){
   const left=countdown(target);
   const plan=premiumActive?"PREMIUM":freeActive?"FREE TRIAL":"EXPIRED";
   const copyWallet=async()=>{if(!PAYMENT_ADDRESS)return;await navigator.clipboard.writeText(PAYMENT_ADDRESS);setCopied(true);setTimeout(()=>setCopied(false),1600)};
-  const refreshAccount=async()=>{const u=auth.currentUser;if(!u)return;const token=await u.getIdToken(true);const r=await fetch(`${API_BASE}/api/account`,{headers:{Authorization:`Bearer ${token}`},cache:"no-store"});if(r.ok){const d=await r.json();setAccount(d.data||null)}};
-  const verifyPayment=async()=>{if(!txHash.trim()){setVerifyState("Enter your transaction hash first.");return}setVerifyState("Verifying transaction on BNB Smart Chain…");try{const u=auth.currentUser;if(!u)throw new Error("Please sign in again.");const token=await u.getIdToken(true);const r=await fetch(`${API_BASE}/api/payment/verify`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify({txHash:txHash.trim()})});const d=await r.json().catch(()=>({}));if(!r.ok){setVerifyState(d.error||"Payment could not be verified.");return}await refreshAccount();setVerifyState(`Payment verified. Premium is active for ${d.data?.days||30} days.`)}catch(e:any){setVerifyState(e?.message||"Verification service is temporarily unavailable. Please try again.")}};
+  const refreshAccount=async()=>{const u=auth.currentUser;if(!u)return;const token=await u.getIdToken(true);const r=await kitsetupsAuthFetch("/api/account",token);if(r.ok){const d=await r.json();setAccount(d.data||null)}};
+  const verifyPayment=async()=>{if(!txHash.trim()){setVerifyState("Enter your transaction hash first.");return}setVerifyState("Verifying transaction on BNB Smart Chain…");try{const u=auth.currentUser;if(!u)throw new Error("Please sign in again.");const token=await u.getIdToken(true);const r=await kitsetupsAuthFetch("/api/payment/verify",token,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({txHash:txHash.trim()})});const d=await r.json().catch(()=>({}));if(!r.ok){setVerifyState(d.error||"Payment could not be verified.");return}await refreshAccount();setVerifyState(`Payment verified. Premium is active for ${d.data?.days||30} days.`)}catch(e:any){setVerifyState(e?.message||"Verification service is temporarily unavailable. Please try again.")}};
   const logout=async()=>{await signOut(auth);window.location.href="/auth"};
   if(loading)return <StandaloneShell title="PROFILE"><div className="nart-card rounded-2xl border border-zinc-800/80 bg-zinc-950/80 px-6 py-16 text-center"><div className="mx-auto h-5 w-5 animate-spin rounded-full border-2 border-zinc-800 border-t-cyan-400"/><p className="mt-4 text-xs text-zinc-500">Restoring your account session…</p></div></StandaloneShell>;
   return <StandaloneShell title="PROFILE"><div className="space-y-4">
