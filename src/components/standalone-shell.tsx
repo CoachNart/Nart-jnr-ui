@@ -44,15 +44,18 @@ export default function StandaloneShell({ children }: { children: ReactNode; tit
 
   return <div className="relative min-h-screen overflow-x-hidden bg-[#050607] text-white">
     <header className="fixed inset-x-0 top-0 z-[60] border-b border-white/[.055] bg-[#050607]/90 shadow-[0_8px_40px_rgba(0,0,0,.28)] backdrop-blur-2xl supports-[backdrop-filter]:bg-[#050607]/70"><div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-5 md:px-8"><Link href="/" aria-label="KitSetups home" className="group flex items-center rounded-xl p-1"><img src="https://www.t3kit.xyz/assets/images/logo.webp" alt="KitSetups" className="h-9 w-9 rounded-lg object-contain transition duration-300 group-hover:drop-shadow-[0_0_14px_rgba(34,211,238,.22)]"/></Link><div className="flex items-center gap-3 sm:gap-5"><MarketPulse/><Link href="/profile" aria-label="Open profile" className="h-9 w-9 overflow-hidden rounded-full border border-white/[.08] bg-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.045)] transition hover:border-cyan-400/25">{user?.photoURL?<img src={user.photoURL} alt="Profile" className="h-full w-full object-cover"/>:<span className="flex h-full w-full items-center justify-center"><UserRound className="h-4 w-4 text-zinc-600"/></span>}</Link></div></div></header>
-    <main className="relative z-[1] mx-auto max-w-6xl px-4 pb-28 pt-24 sm:px-5 md:px-8 md:pt-28">{children}</main>
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[.035] bg-[#050607]/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl supports-[backdrop-filter]:bg-[#050607]/60">
-      <div className="mx-auto flex max-w-md items-center justify-center gap-2 px-4 py-3 sm:gap-3">
+    <main className="relative z-[1] mx-auto max-w-6xl px-4 pb-32 pt-24 sm:px-5 md:px-8 md:pt-28">{children}</main>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),10px)] pt-2">
+      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-1 rounded-[26px] border border-white/[.07] bg-[#090b0d]/88 px-2 py-2 shadow-[0_-10px_40px_rgba(0,0,0,.28),0_0_30px_rgba(34,211,238,.025)] backdrop-blur-2xl supports-[backdrop-filter]:bg-[#090b0d]/72 sm:gap-2 sm:px-3">
         {nav.map(({href,label,icon:Icon})=>{
           const active = path === href;
           return <Link key={href} href={href} aria-label={label} aria-current={active ? "page" : undefined}
-            className={`group relative flex h-11 w-12 items-center justify-center rounded-2xl transition-all duration-200 ${active ? "text-cyan-200" : "text-zinc-600 hover:text-zinc-300"}`}>
-            {active && <span className="absolute inset-0 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.045] shadow-[0_0_22px_rgba(34,211,238,.12),inset_0_0_16px_rgba(34,211,238,.035)]"/>}
-            <span className="relative flex items-center justify-center"><Icon size={18} strokeWidth={active ? 1.9 : 1.55}/>{active && <span className="absolute -bottom-3 h-px w-3 rounded-full bg-cyan-300/80 shadow-[0_0_8px_rgba(34,211,238,.75)]"/>}</span>
+            className={`group relative flex h-14 flex-1 items-center justify-center rounded-[20px] transition-all duration-200 ease-out ${active ? "text-cyan-200" : "text-zinc-600 hover:text-zinc-300"}`}>
+            {active && <span className="absolute inset-1 rounded-[17px] border border-cyan-300/[.16] bg-cyan-300/[.055] shadow-[0_0_26px_rgba(34,211,238,.10),inset_0_0_18px_rgba(34,211,238,.035)]"/>}
+            <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:-translate-y-0.5">
+              <Icon size={21} strokeWidth={active ? 1.8 : 1.45}/>
+              {active && <span className="absolute -bottom-2.5 h-1 w-1 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,.9)]"/>}
+            </span>
             <span className="sr-only">{label}</span>
           </Link>;
         })}
