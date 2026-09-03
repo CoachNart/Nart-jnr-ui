@@ -8,7 +8,7 @@ import { kitsetupsAuthFetch } from "../lib/api";
 
 const PREMIUM_MS=30*24*60*60*1000;
 const PAYMENT_ADDRESS=process.env.NEXT_PUBLIC_BNB_USDT_PAYMENT_ADDRESS||"";
-type Account={displayName?:string;email?:string;photoURL?:string|null;createdAt?:string;trialStartedAt?:string|{seconds?:number;_seconds?:number};trialEndsAt?:string;plan?:string;planName?:string;subscriptionEndsAt?:string;accessStatus?:string;accessLocked?:boolean;accessExpiresAt?:string|null;access?:{expiresAt?:string|null;status?:string;hasAccess?:boolean}};
+type Account={displayName?:string;email?:string;photoURL?:string|null;createdAt?:string;trialActive?:boolean;trialStartedAt?:string|{seconds?:number;_seconds?:number};trialEndsAt?:string;plan?:string;planName?:string;subscriptionEndsAt?:string;accessStatus?:string;accessLocked?:boolean;accessExpiresAt?:string|null;access?:{expiresAt?:string|null;status?:string;hasAccess?:boolean}};
 function countdown(target:number){const ms=Math.max(0,target-Date.now());const total=Math.floor(ms/1000);return{ms,days:Math.floor(total/86400),hours:Math.floor(total%86400/3600),minutes:Math.floor(total%3600/60),seconds:total%60}}
 function formatAddress(v:string){return v?v.slice(0,7)+"…"+v.slice(-5):"Payment wallet will appear here"}
 function dateMs(value: unknown){if(!value)return 0;if(value instanceof Date)return value.getTime();if(typeof value==="object"&&value!==null&&"toDate" in value&&typeof (value as any).toDate==="function")return (value as any).toDate().getTime();if(typeof value==="object"&&value!==null&&Number.isFinite(Number((value as any)._seconds)))return Number((value as any)._seconds)*1000;const n=new Date(String(value)).getTime();return Number.isFinite(n)?n:0}
