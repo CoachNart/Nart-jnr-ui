@@ -1,0 +1,3 @@
+export default function Loading(){
+ return <main className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center bg-[#050505] text-white"><div className="flex flex-col items-center"><div className="relative flex h-16 w-16 items-center justify-center"><span className="absolute inset-0 animate-ping rounded-2xl border border-cyan-400/20"/><img src="https://www.t3kit.xyz/assets/images/logo.webp" alt="KitSetups" className="h-12 w-12 rounded-xl object-contain"/></div><div className="mt-5 flex items-center gap-2 font-mono text-[9px] tracking-[.3em] text-zinc-500"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400"/>LOADING MARKET DESK</div></div></main>;
+}
