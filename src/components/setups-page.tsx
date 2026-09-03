@@ -1,44 +1,248 @@
 "use client";
+
 import Link from "next/link";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ArrowUpRight, ChevronDown, Clock3, Crosshair, RefreshCw, ShieldAlert } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowUpRight, Crosshair, RefreshCw } from "lucide-react";
 import StandaloneShell from "./standalone-shell";
 import { auth } from "../lib/firebase";
 import { kitsetupsAuthFetch } from "../lib/api";
 
 type Signal = any;
-const fmt=(v:unknown,d=2)=>{const n=Number(v);return Number.isFinite(n)?n.toLocaleString(undefined,{maximumFractionDigits:d}):"—"};
-const label=(v:unknown)=>String(v||"—").replaceAll("_"," ").toUpperCase();
-const state=(s:Signal)=>String(s?.lifecycle?.status||s?.status||"WAIT").toUpperCase();
-const liveStates=["READY","ENTRY_HIT","ACTIVE","TP1_HIT","TP2_HIT","TP3_HIT"];
-const color=(v:string)=>v.toLowerCase()==="bullish"?"text-emerald-300":v.toLowerCase()==="bearish"?"text-red-300":"text-zinc-500";
-function timeframeRows(s:Signal){const t=s?.analysis?.context?.timeframes||s?.context?.timeframes||{};const st=s?.analysis?.structures||s?.structures||{};const m=s?.analysis?.momentum||s?.momentum||{};return ["1w","1d","4h","1h","30m"].map(tf=>({tf,trend:t[tf]?.trend||st[tf]?.direction||"neutral",structure:st[tf]?.breaks?.latest?.kind||st[tf]?.structure||"neutral",momentum:m[tf]?.direction||m?.timeframes?.[tf]?.direction||"neutral"}));}
-function lifecycle(s:Signal){const current=state(s);return <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-4"><div className="flex items-center justify-between"><div><p className="font-mono text-[8px] tracking-[.18em] text-zinc-600">SETUP STATUS</p><p className={`mt-1 text-lg font-semibold ${current==="STOP LOSS"?"text-red-300":liveStates.includes(current)?"text-emerald-300":"text-zinc-300"}`}>{label(current)}</p></div><Clock3 className="h-4 w-4 text-zinc-700"/></div><div className="mt-4 flex items-center gap-1 overflow-x-auto pb-1">{["READY","ENTRY HIT","ACTIVE","TP1","TP2","TP3"].map((x,i)=>{const hit=current===x||((x==="TP1"&&["TP1_HIT","TP2_HIT","TP3_HIT"].includes(current))||(x==="TP2"&&["TP2_HIT","TP3_HIT"].includes(current))||(x==="TP3"&&current==="TP3_HIT")));return <span key={x} className={`whitespace-nowrap rounded-full border px-2.5 py-1 font-mono text-[7px] tracking-[.08em] ${hit?"border-cyan-300/20 bg-cyan-300/[.06] text-cyan-200":"border-zinc-900 text-zinc-700"}`}>{x}</span>})}</div></div>}
-function metric(label:string,value:string,accent=false){return <div className="rounded-xl border border-zinc-900 bg-black/20 px-3 py-2.5"><p className="font-mono text-[7px] tracking-[.16em] text-zinc-700">{label}</p><p className={`mt-1 text-sm font-semibold ${accent?"text-cyan-200":"text-zinc-200"}`}>{value}</p></div>}
-function thesisText(s:Signal){const th=s?.thesis||{};return [th.structural,th.liquidity,th.entry].filter(Boolean).join(" ").replace(/\s+/g," ").trim()||"The engine has not supplied a published thesis for this setup.";}
-function targets(s:Signal){return Array.isArray(s?.targets)?s.targets:[];}
-function targetDistance(entry:number,p:number){return entry&&p?`${Math.abs(p-entry)/entry*100 .toFixed(2)}%`:"—"}
-export default function SetupsPageView(){
- const[signals,setSignals]=useState<Signal[]>([]),[scanner,setScanner]=useState<Signal>(null),[access,setAccess]=useState<Signal>(null),[loading,setLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[error,setError]=useState("");
- const load=useCallback(async(silent=false)=>{const user=auth.currentUser;if(!user){setLoading(false);setError("Sign in to view live setups.");return}silent?setRefreshing(true):setLoading(true);setError("");try{const token=await user.getIdToken(),r=await kitsetupsAuthFetch("/api/signals",token),b=await r.json();if(!r.ok||!b?.ok)throw new Error(b?.error||"Unable to load setups");const d=b.data||{};setSignals(Array.isArray(d.signals)?d.signals:Array.isArray(d.scanResults)?d.scanResults:[]);setScanner(d.scanner||null);setAccess(d.access||null)}catch(e){setError(e instanceof Error?e.message:"Unable to load live setups.")}finally{setLoading(false);setRefreshing(false)}},[]);
- useEffect(()=>{let mounted=true;const boot=async()=>{await auth.authStateReady();if(mounted)await load()};void boot();const id=window.setInterval(()=>{if(auth.currentUser)void load(true)},15000);return()=>{mounted=false;window.clearInterval(id)}},[load]);
- const visible=[...signals].sort((a,b)=>Number(b?.quality?.score||0)-Number(a?.quality?.score||0)),hasAccess=Boolean(access?.hasAccess);
- return <StandaloneShell title="SETUPS"><section className="mb-7 flex items-center justify-between"><div><h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Trading Setups</h1><p className="mt-1 text-xs text-zinc-600">Clear trade plans built from the live engine.</p></div><button onClick={()=>void load(true)} disabled={loading||refreshing} aria-label="Refresh setups" className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-500 transition hover:border-cyan-400/20 hover:text-cyan-300 disabled:opacity-40"><RefreshCw className={refreshing?"h-3.5 w-3.5 animate-spin":"h-3.5 w-3.5"}/></button></section>
- {error&&<div className="mb-5 rounded-2xl border border-amber-500/15 bg-amber-500/[.035] p-4 text-xs text-amber-300">{error}</div>}
- {loading&&!signals.length?<div className="h-96 animate-pulse rounded-3xl border border-zinc-900 bg-zinc-950/70"/>:visible.length?<div className="space-y-4">{visible.map((s,i)=><SetupCard key={s?.signalId||s?.symbol||i} signal={s} hasAccess={hasAccess}/>)}</div>:<div className="rounded-3xl border border-zinc-800/80 bg-zinc-950/70 px-5 py-16 text-center"><Crosshair className="mx-auto h-6 w-6 text-zinc-700"/><h3 className="mt-4 text-sm font-medium text-zinc-300">No published setup</h3><p className="mx-auto mt-2 max-w-md text-xs leading-5 text-zinc-600">The engine is connected to live market data. A trade appears when the combined evidence forms a coherent opportunity.</p></div>}
- <p className="mt-4 text-right font-mono text-[7px] tracking-[.14em] text-zinc-700">LIVE ENGINE {scanner?.updatedAt?`· ${new Date(scanner.updatedAt).toLocaleTimeString()}`:""}</p></StandaloneShell>;
+
+const fmt = (value: unknown, digits = 2) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: digits }) : "—";
+};
+
+const text = (value: unknown) => String(value || "—").replaceAll("_", " ").toUpperCase();
+
+const lifecycleStatus = (signal: Signal) =>
+  String(signal?.lifecycle?.status || signal?.signalState || signal?.status || "WAIT").toUpperCase();
+
+const lifecycleTone = (status: string) => {
+  if (status === "STOP_LOSS") return "text-red-300 border-red-400/15 bg-red-400/[.04]";
+  if (status === "MISSED") return "text-amber-300 border-amber-400/15 bg-amber-400/[.04]";
+  if (status === "EXPIRED") return "text-zinc-400 border-zinc-700/60 bg-zinc-800/20";
+  if (["ENTRY_HIT", "TP1_HIT", "TP2_HIT", "TP3_HIT"].includes(status)) return "text-emerald-300 border-emerald-400/15 bg-emerald-400/[.04]";
+  if (status === "ACTIVE") return "text-cyan-300 border-cyan-400/15 bg-cyan-400/[.04]";
+  return "text-zinc-300 border-zinc-700/60 bg-zinc-800/20";
+};
+
+function targets(signal: Signal) {
+  return Array.isArray(signal?.targets) ? signal.targets.slice(0, 3) : [];
 }
-function SetupCard({signal:s,hasAccess}:{signal:Signal;hasAccess:boolean}){const dir=String(s?.direction||"").toUpperCase(),setup=label(s?.setupType||"SETUP"),score=Number(s?.quality?.score||0),grade=s?.quality?.grade||"—",confidence=s?.quality?.confidence||"—",ts=targets(s),entry=hasAccess?Number(s?.entry):NaN,stop=hasAccess?Number(s?.stop):NaN,rr=hasAccess?Number(s?.riskReward):NaN,rows=timeframeRows(s),th=s?.thesis||{},id=s?.signalId||s?.id;const structure=s?.analysis?.structures?.[s?.timeframe||"30m"]||s?.structures?.[s?.timeframe||"30m"]||{};const br=structure?.breaks?.latest;const stopLabel=hasAccess&&Number.isFinite(stop)?`Setup invalidates below ${fmt(stop)}.`:"Structural invalidation is supplied by the engine.";const relevant=ts.slice(0,3);return <article className="overflow-hidden rounded-3xl border border-zinc-800/90 bg-[#080a0c] shadow-[0_20px_70px_rgba(0,0,0,.2)]"><div className="p-5 sm:p-7">
- <header className="flex flex-col gap-5 border-b border-zinc-900 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><div className="flex items-center gap-3"><h2 className="text-3xl font-semibold tracking-[-.04em] text-zinc-100">{s?.symbol||"—"}</h2><span className={`text-lg font-semibold ${dir==="LONG"?"text-emerald-300":dir==="SHORT"?"text-red-300":"text-zinc-500"}`}>{dir||"WATCH"}</span></div><div className="mt-2 flex items-center gap-2"><span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.045] px-2.5 py-1 font-mono text-[8px] tracking-[.12em] text-cyan-200">{setup}</span><span className="font-mono text-[8px] tracking-[.12em] text-zinc-600">{label(s?.timeframe||"30M")} EXECUTION</span></div></div><div className="grid grid-cols-3 gap-2 sm:min-w-[300px]"><div className="rounded-xl border border-zinc-900 px-3 py-2 text-center"><p className="font-mono text-[7px] text-zinc-700">SCORE</p><p className="mt-1 text-lg font-semibold text-cyan-200">{score}<span className="text-[9px] text-zinc-700">/100</span></p></div><div className="rounded-xl border border-zinc-900 px-3 py-2 text-center"><p className="font-mono text-[7px] text-zinc-700">GRADE</p><p className="mt-1 text-lg font-semibold text-zinc-200">{grade}</p></div><div className="rounded-xl border border-zinc-900 px-3 py-2 text-center"><p className="font-mono text-[7px] text-zinc-700">CONFIDENCE</p><p className="mt-1 text-[10px] font-medium text-zinc-300">{label(confidence)}</p></div></div></header>
- <section className="pt-5"><div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{metric("ENTRY",hasAccess?fmt(s?.entry):"PROTECTED",true)}{metric("STOP",hasAccess?fmt(s?.stop):"PROTECTED")}{metric("TP1",hasAccess?fmt(ts[0]?.price):"—")}{metric("TP2",hasAccess?fmt(ts[1]?.price):"—")}{metric("TP3",hasAccess?fmt(ts[2]?.price):"—")}</div><div className="mt-2 grid grid-cols-3 gap-2">{metric("RISK",hasAccess&&Number.isFinite(entry)&&Number.isFinite(stop)?`${fmt(Math.abs(entry-stop))} pts`:"—")}{metric("TP1 RR",hasAccess&&ts[0]?.riskReward?`${fmt(ts[0].riskReward)}R`:"—")}{metric("TP2 RR",hasAccess&&ts[1]?.riskReward?`${fmt(ts[1].riskReward)}R`:"—")}</div></section>
- <section className="mt-7 rounded-2xl border border-zinc-900 bg-black/20 p-5"><p className="font-mono text-[8px] tracking-[.18em] text-cyan-400">WHY THIS SETUP?</p><p className="mt-3 max-w-4xl text-sm leading-6 text-zinc-400">{thesisText(s)}</p></section>
- <section className="mt-7"><SectionTitle title="MARKET CONTEXT"/><div className="mt-3 overflow-x-auto rounded-2xl border border-zinc-900"><div className="min-w-[620px]"><div className="grid grid-cols-4 border-b border-zinc-900 px-4 py-2 font-mono text-[7px] tracking-[.16em] text-zinc-700"><span>TIMEFRAME</span><span>TREND</span><span>STRUCTURE</span><span>MOMENTUM</span></div>{rows.map(r=><div key={r.tf} className={`grid grid-cols-4 items-center border-b border-zinc-950 px-4 py-3 last:border-0 ${r.tf===(s?.timeframe||"30m").toLowerCase()?"bg-cyan-300/[.035]":""}`}><span className={`font-mono text-[9px] ${r.tf===(s?.timeframe||"30m").toLowerCase()?"text-cyan-200":"text-zinc-500"}`}>{r.tf.toUpperCase()}</span><span className={`text-[9px] font-medium ${color(r.trend)}`}>{label(r.trend)}</span><span className={`text-[9px] font-medium ${color(r.structure.includes("BOS")||r.structure.includes("CHoCH")?dir==="LONG"?"bullish":"bearish":r.structure)}`}>{label(r.structure)}</span><span className={`text-[9px] font-medium ${color(r.momentum)}`}>{label(r.momentum)}</span></div>)}</div></div></section>
- <section className="mt-7 grid gap-4 lg:grid-cols-2"><div className="rounded-2xl border border-zinc-900 p-5"><SectionTitle title="STRUCTURE"/><div className="mt-4 grid grid-cols-2 gap-3"><Info label="CURRENT" value={label(structure?.direction||s?.direction)}/><Info label="EVENT" value={label(br?.kind||"—")}/><Info label="BREAK" value={hasAccess&&br?.level?fmt(br.level):"—"}/><Info label="PROTECTED LOW" value={hasAccess&&structure?.protectedLow?.price?fmt(structure.protectedLow.price):"—"}/></div></div><div className="rounded-2xl border border-zinc-900 p-5"><SectionTitle title="LIQUIDITY MAP"/><div className="mt-4 space-y-2">{relevant.length?relevant.map((t:any,i:number)=><div key={i} className="flex items-center justify-between rounded-xl bg-black/20 px-3 py-3"><div><p className="text-xs font-medium text-zinc-300">{hasAccess?fmt(t.price):"PROTECTED"}</p><p className="mt-1 font-mono text-[7px] text-zinc-700">{label(t.side||dir==="LONG"?"BUY-SIDE":"SELL-SIDE")} · {label(t.liquidityClass||t.timeframe||"LIQUIDITY")}</p></div><span className="font-mono text-[8px] text-zinc-600">TP{i+1}</span></div>):<p className="text-xs text-zinc-600">No published liquidity targets.</p>}</div></div></section>
- <section className="mt-4 grid gap-4 lg:grid-cols-2"><div className="rounded-2xl border border-zinc-900 p-5"><SectionTitle title="ENTRY CONFIRMATION"/><p className="mt-3 text-sm text-zinc-300">Model: <span className="font-medium text-cyan-200">{setup}</span></p><p className="mt-2 text-xs leading-5 text-zinc-600">{th.entry||"Entry confirmation is supplied by the trading engine."}</p></div><div className="rounded-2xl border border-red-400/10 bg-red-400/[.025] p-5"><div className="flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-red-300"/><SectionTitle title="INVALIDATION"/></div><p className="mt-3 text-sm font-medium text-zinc-300">{stopLabel}</p><p className="mt-2 text-xs text-zinc-600">The setup is no longer valid if the engine's structural invalidation is breached.</p></div></section>
- <div className="mt-4"><lifecycleWrapper signal={s}/></div>
- <details className="mt-5 rounded-2xl border border-zinc-900 bg-black/10"><summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-mono text-[8px] tracking-[.16em] text-zinc-600">ADVANCED DETAILS <ChevronDown className="h-3.5 w-3.5"/></summary><div className="border-t border-zinc-900 p-4 text-[9px] leading-5 text-zinc-600"><p>{(s?.reasons||[]).join(" · ")||"No diagnostic reasons published."}</p><p className="mt-2">Generated: {s?.generatedAt?new Date(s.generatedAt).toLocaleString():"—"}</p></div></details>
- {id&&<div className="mt-5 flex justify-end"><Link href={`/analysis?setup=${encodeURIComponent(id)}`} className="inline-flex items-center gap-1 font-mono text-[8px] tracking-[.1em] text-cyan-400 hover:text-cyan-200">OPEN FULL ANALYSIS <ArrowUpRight className="h-3 w-3"/></Link></div>}
- </div></article>}
-function lifecycleWrapper({signal}:{signal:Signal}){return lifecycle(signal)}
-function SectionTitle({title}:{title:string}){return <h3 className="font-mono text-[8px] font-medium tracking-[.18em] text-zinc-600">{title}</h3>}
-function Info({label,value}:{label:string;value:string}){return <div className="rounded-xl bg-black/20 p-3"><p className="font-mono text-[7px] tracking-[.15em] text-zinc-700">{label}</p><p className="mt-1.5 text-xs font-medium text-zinc-300">{value}</p></div>}
+
+function Lifecycle({ signal }: { signal: Signal }) {
+  const lifecycle = signal?.lifecycle || {};
+  const status = lifecycleStatus(signal);
+  const targetStates = Array.isArray(lifecycle.targets) ? lifecycle.targets : [];
+  const entryHit = lifecycle.entryHit === true || ["ENTRY_HIT", "ACTIVE", "TP1_HIT", "TP2_HIT", "TP3_HIT", "STOP_LOSS", "CLOSED"].includes(status);
+  const active = ["ACTIVE", "TP1_HIT", "TP2_HIT", "TP3_HIT"].includes(status);
+  const steps = [
+    { key: "READY", label: "READY", complete: ["ENTRY_HIT", "ACTIVE", "TP1_HIT", "TP2_HIT", "TP3_HIT", "STOP_LOSS", "CLOSED"].includes(status) },
+    { key: "ENTRY_HIT", label: "ENTRY", complete: entryHit },
+    { key: "ACTIVE", label: "ACTIVE", complete: active },
+    { key: "TP1_HIT", label: "TP1", complete: targetStates[0]?.hit === true || ["TP1_HIT", "TP2_HIT", "TP3_HIT"].includes(status) },
+    { key: "TP2_HIT", label: "TP2", complete: targetStates[1]?.hit === true || ["TP2_HIT", "TP3_HIT"].includes(status) },
+    { key: "TP3_HIT", label: "TP3", complete: targetStates[2]?.hit === true || status === "TP3_HIT" },
+    { key: "CLOSED", label: "CLOSED", complete: status === "CLOSED" },
+  ];
+  const terminal = ["STOP_LOSS", "MISSED", "EXPIRED"].includes(status);
+
+  return (
+    <div className="mt-5 rounded-2xl border border-zinc-900 bg-black/20 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[7px] tracking-[.18em] text-zinc-600">LIFECYCLE</p>
+          <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 font-mono text-[8px] tracking-[.1em] ${lifecycleTone(status)}`}>
+            {text(status)}
+          </span>
+        </div>
+        {lifecycle?.outcome ? <span className="font-mono text-[7px] tracking-[.12em] text-zinc-600">{text(lifecycle.outcome)}</span> : null}
+      </div>
+
+      <div className="mt-5 flex items-center gap-1 overflow-x-auto pb-1">
+        {steps.map((step, index) => (
+          <div key={step.key} className="flex shrink-0 items-center gap-1">
+            <span className={`rounded-full border px-2.5 py-1.5 font-mono text-[7px] tracking-[.08em] ${step.complete ? "border-emerald-400/20 bg-emerald-400/[.045] text-emerald-300" : status === step.key ? "border-cyan-400/20 bg-cyan-400/[.045] text-cyan-300" : "border-zinc-900 text-zinc-700"}`}>
+              {step.label}
+            </span>
+            {index < steps.length - 1 ? <span className="text-zinc-800">→</span> : null}
+          </div>
+        ))}
+      </div>
+
+      {terminal ? (
+        <div className={`mt-3 rounded-xl border px-3 py-2 font-mono text-[8px] tracking-[.08em] ${lifecycleTone(status)}`}>
+          {text(status)}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TradeMetric({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "entry" | "stop" | "target" }) {
+  const toneClass = tone === "entry" || tone === "target" ? "text-emerald-300" : tone === "stop" ? "text-red-300" : "text-zinc-100";
+  return (
+    <div className="rounded-2xl border border-zinc-900 bg-[#090b0d] px-4 py-4">
+      <p className="font-mono text-[7px] tracking-[.18em] text-zinc-600">{label}</p>
+      <p className={`mt-2 text-base font-semibold tracking-tight ${toneClass}`}>{value}</p>
+    </div>
+  );
+}
+
+function SetupCard({ signal, hasAccess }: { signal: Signal; hasAccess: boolean }) {
+  const direction = String(signal?.direction || "").toUpperCase();
+  const ts = targets(signal);
+  const id = signal?.signalId || signal?.id;
+  const confidence = signal?.quality?.confidence || "—";
+  const grade = signal?.quality?.grade || "—";
+  const status = lifecycleStatus(signal);
+  const preview = signal?.thesis?.structural || signal?.thesis?.entry || signal?.reasons?.[0] || "Live setup awaiting a concise engine thesis.";
+  const currentPrice = signal?.price;
+
+  return (
+    <article className="overflow-hidden rounded-[28px] border border-zinc-800/90 bg-[#07090b] shadow-[0_24px_80px_rgba(0,0,0,.22)]">
+      <div className="p-5 sm:p-6">
+        <header className="flex items-start justify-between gap-4 border-b border-zinc-900 pb-5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h2 className="text-2xl font-semibold tracking-[-.04em] text-zinc-100">{signal?.symbol || "—"}</h2>
+              <span className={`text-sm font-semibold ${direction === "LONG" ? "text-emerald-300" : direction === "SHORT" ? "text-red-300" : "text-zinc-500"}`}>{direction || "WATCH"}</span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-zinc-800 bg-zinc-900/40 px-2.5 py-1 font-mono text-[7px] tracking-[.13em] text-zinc-400">{text(signal?.setupType || "SETUP")}</span>
+              <span className={`rounded-full border px-2.5 py-1 font-mono text-[7px] tracking-[.13em] ${lifecycleTone(status)}`}>{text(status)}</span>
+            </div>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="font-mono text-[7px] tracking-[.16em] text-zinc-600">CURRENT MARKET PRICE</p>
+            <p className="mt-1 text-base font-semibold text-zinc-100">{fmt(currentPrice)}</p>
+          </div>
+        </header>
+
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <TradeMetric label="ENTRY" value={hasAccess ? `$${fmt(signal?.entry)}` : "PROTECTED"} tone="entry" />
+          <TradeMetric label="STOP LOSS" value={hasAccess ? `$${fmt(signal?.stop)}` : "PROTECTED"} tone="stop" />
+          <TradeMetric label="TP1" value={hasAccess ? `$${fmt(ts[0]?.price)}` : "PROTECTED"} tone="target" />
+          <TradeMetric label="TP2" value={hasAccess ? `$${fmt(ts[1]?.price)}` : "PROTECTED"} tone="target" />
+          <TradeMetric label="TP3" value={hasAccess ? `$${fmt(ts[2]?.price)}` : "PROTECTED"} tone="target" />
+        </div>
+
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <TradeMetric label="RISK" value={hasAccess && Number.isFinite(Number(signal?.risk)) ? `${fmt(signal.risk)} pts` : "—"} />
+          <TradeMetric label="TP1 RR" value={hasAccess && ts[0]?.riskReward != null ? `${fmt(ts[0].riskReward)} R` : "—"} />
+          <TradeMetric label="TP2 RR" value={hasAccess && ts[1]?.riskReward != null ? `${fmt(ts[1].riskReward)} R` : "—"} />
+          <TradeMetric label="TP3 RR" value={hasAccess && ts[2]?.riskReward != null ? `${fmt(ts[2].riskReward)} R` : "—"} />
+        </div>
+
+        <div className="mt-5 grid gap-2 sm:grid-cols-[1fr_auto]">
+          <div className="rounded-2xl border border-zinc-900 bg-black/20 px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-mono text-[7px] tracking-[.18em] text-zinc-600">CONFIDENCE</p>
+                <p className="mt-1 text-sm font-semibold text-zinc-100">{text(confidence)}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-mono text-[7px] tracking-[.18em] text-zinc-600">GRADE</p>
+                <p className="mt-1 text-sm font-semibold text-cyan-200">{grade}</p>
+              </div>
+            </div>
+          </div>
+          <Link href={`/setups/${encodeURIComponent(id || signal?.symbol || "setup")}`} className="group flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045] px-5 text-xs font-semibold text-cyan-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/[.075]">
+            View Full Analysis <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+
+        <p className="mt-4 line-clamp-2 text-xs leading-5 text-zinc-500">{preview}</p>
+        <Lifecycle signal={signal} />
+      </div>
+    </article>
+  );
+}
+
+export default function SetupsPageView() {
+  const [signals, setSignals] = useState<Signal[]>([]);
+  const [scanner, setScanner] = useState<Signal>(null);
+  const [access, setAccess] = useState<Signal>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async (silent = false) => {
+    const user = auth.currentUser;
+    if (!user) {
+      setLoading(false);
+      setError("Sign in to view live setups.");
+      return;
+    }
+    silent ? setRefreshing(true) : setLoading(true);
+    setError("");
+    try {
+      const token = await user.getIdToken();
+      const response = await kitsetupsAuthFetch("/api/signals", token);
+      const body = await response.json();
+      if (!response.ok || !body?.ok) throw new Error(body?.error || "Unable to load setups");
+      const data = body.data || {};
+      setSignals(Array.isArray(data.signals) ? data.signals : Array.isArray(data.scanResults) ? data.scanResults : []);
+      setScanner(data.scanner || null);
+      setAccess(data.access || null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load live setups.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const boot = async () => {
+      await auth.authStateReady();
+      if (mounted) await load();
+    };
+    void boot();
+    const interval = window.setInterval(() => {
+      if (auth.currentUser) void load(true);
+    }, 15000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [load]);
+
+  const visible = [...signals].sort((a, b) => Number(b?.quality?.score || 0) - Number(a?.quality?.score || 0));
+  const hasAccess = Boolean(access?.hasAccess);
+
+  return (
+    <StandaloneShell title="SETUPS">
+      <section className="mb-7 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Trading Setups</h1>
+          <p className="mt-1 text-xs text-zinc-600">Execution-ready trade tickets from the live engine.</p>
+        </div>
+        <button onClick={() => void load(true)} disabled={loading || refreshing} aria-label="Refresh setups" className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-500 transition hover:border-cyan-400/20 hover:text-cyan-300 disabled:opacity-40">
+          <RefreshCw className={refreshing ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
+        </button>
+      </section>
+
+      {error ? <div className="mb-5 rounded-2xl border border-amber-500/15 bg-amber-500/[.035] p-4 text-xs text-amber-300">{error}</div> : null}
+
+      {loading && !signals.length ? (
+        <div className="h-96 animate-pulse rounded-3xl border border-zinc-900 bg-zinc-950/70" />
+      ) : visible.length ? (
+        <div className="space-y-4">
+          {visible.map((signal, index) => <SetupCard key={signal?.signalId || signal?.symbol || index} signal={signal} hasAccess={hasAccess} />)}
+        </div>
+      ) : (
+        <div className="rounded-3xl border border-zinc-800/80 bg-zinc-950/70 px-5 py-16 text-center">
+          <Crosshair className="mx-auto h-6 w-6 text-zinc-700" />
+          <h3 className="mt-4 text-sm font-medium text-zinc-300">No published setup</h3>
+          <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-zinc-600">A trade ticket appears when the engine publishes a coherent opportunity.</p>
+        </div>
+      )}
+
+      <p className="mt-4 text-right font-mono text-[7px] tracking-[.14em] text-zinc-700">LIVE ENGINE{scanner?.updatedAt ? ` · ${new Date(scanner.updatedAt).toLocaleTimeString()}` : ""}</p>
+    </StandaloneShell>
+  );
+}
