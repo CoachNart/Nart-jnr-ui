@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 const USDT="0x55d398326f99059ff775485246999027b3197955";
 const TRANSFER_TOPIC="0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a5df523b3ef";
 const RPC="https://bsc-dataseed.binance.org";
-const REQUIRED=30n*10n**18n;
+const REQUIRED=BigInt(30)*BigInt(10)**BigInt(18);
 
 async function rpc(method:string,params:unknown[]){
  const r=await fetch(RPC,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method,params}),cache:"no-store"});
@@ -27,7 +27,7 @@ export async function POST(req:Request){
    if(String(log.address).toLowerCase()!==USDT)return false;
    if(!log.topics||log.topics.length<3||String(log.topics[0]).toLowerCase()!==TRANSFER_TOPIC)return false;
    const to="0x"+String(log.topics[2]).slice(-40).toLowerCase();
-   let value=0n;try{value=BigInt(log.data)}catch{return false}
+   let value=BigInt(0);try{value=BigInt(log.data)}catch{return false}
    return to===wallet&&value>=REQUIRED;
   });
   if(!match)return NextResponse.json({error:"No confirmed 30 USDT payment to the configured KitSetups wallet was found in this transaction."},{status:400});
