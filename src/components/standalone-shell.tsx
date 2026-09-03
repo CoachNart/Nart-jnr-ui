@@ -28,18 +28,14 @@ export default function StandaloneShell({ children, title }: { children: ReactNo
     let unsubscribe = () => {};
 
     const boot = async () => {
-      // Wait for Firebase persistence to finish restoring the existing session.
-      // Without this, the first transient null can incorrectly redirect a valid user.
       await auth.authStateReady();
       if (!active) return;
-
       const current = auth.currentUser;
       setUser(current);
       if (!current) {
         router.replace(`/auth?next=${encodeURIComponent(path)}`);
         return;
       }
-
       unsubscribe = onAuthStateChanged(auth, (u) => {
         if (!active) return;
         setUser(u);
@@ -54,6 +50,6 @@ export default function StandaloneShell({ children, title }: { children: ReactNo
   return <div className="relative min-h-screen overflow-x-hidden bg-[#050505] text-white">
     <header className="fixed inset-x-0 top-0 z-[60] border-b border-white/[.06] bg-[#050505]/88 shadow-[0_10px_40px_rgba(0,0,0,.22)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#050505]/75"><div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-5 md:px-8"><Link href="/" aria-label="KitSetups home" className="group flex items-center"><img src="https://www.t3kit.xyz/assets/images/logo.webp" alt="KitSetups" className="h-9 w-9 rounded-lg object-contain transition duration-300 group-hover:scale-105 group-hover:drop-shadow-[0_0_12px_rgba(34,211,238,.25)]"/></Link><div className="flex items-center gap-3 sm:gap-4"><MarketPulse/><Link href="/profile" aria-label="Open profile" className="h-8 w-8 overflow-hidden rounded-full border border-zinc-800 bg-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.05)] transition hover:border-cyan-400/30">{user?.photoURL?<img src={user.photoURL} alt="Profile" className="h-full w-full object-cover"/>:<span className="flex h-full w-full items-center justify-center"><UserRound className="h-4 w-4 text-zinc-600"/></span>}</Link></div></div></header>
     <main className="mx-auto max-w-6xl px-4 pb-28 pt-24 sm:px-5 md:px-8 md:pt-28">{title&&<div className="mb-6"><p className="font-mono text-[9px] tracking-[.25em] text-cyan-400/80">KITSETUPS</p><h1 className="mt-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">{title}</h1><div className="nart-line mt-4 h-px w-full opacity-30"/></div>}{children}</main>
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[.06] bg-[#050505]/90 shadow-[0_-14px_40px_rgba(0,0,0,.28)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#050505]/80"><div className="mx-auto grid max-w-lg grid-cols-5 px-2 py-2">{nav.map(({href,label,icon:Icon})=>{const active=path===href;return <Link key={href} href={href} className={`group relative flex flex-col items-center gap-1 rounded-xl py-2 text-[9px] font-mono tracking-wide transition ${active?"text-cyan-400":"text-zinc-600 hover:text-zinc-400"}`}><Icon className={`h-4 w-4 transition ${active?"drop-shadow-[0_0_7px_rgba(34,211,238,.45)]":"group-hover:text-zinc-300"}`} strokeWidth={active?2.3:1.7}/>{label}{active&&<span className="absolute bottom-0 h-px w-5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,.7)]"/>}</Link>})}</div></nav>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[.06] bg-[#050505]/90 shadow-[0_-14px_40px_rgba(0,0,0,.28)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#050505]/80"><div className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-2 py-2">{nav.map(({href,label,icon:Icon})=>{const active=path===href;return <Link key={href} href={href} aria-current={active?"page":undefined} className={`group relative flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-2xl border px-1 py-2.5 text-[9px] font-mono tracking-wide transition-all duration-200 ${active?"border-cyan-400/20 bg-cyan-400/[.08] text-cyan-300 shadow-[0_0_24px_rgba(34,211,238,.08)]":"border-transparent text-zinc-600 hover:border-white/[.06] hover:bg-white/[.025] hover:text-zinc-300"}`}><span className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all duration-200 ${active?"bg-cyan-300/10 text-cyan-300":"bg-white/[.025] text-zinc-600 group-hover:bg-white/[.05] group-hover:text-zinc-300"}`}><Icon className={`${active?"drop-shadow-[0_0_8px_rgba(34,211,238,.55)]":"transition-transform duration-200 group-hover:-translate-y-0.5"}`} size={16} strokeWidth={active?2.3:1.7}/></span><span>{label}</span>{active&&<span className="absolute inset-x-5 bottom-1 h-px rounded-full bg-cyan-300/80 shadow-[0_0_9px_rgba(34,211,238,.7)]"/>}</Link>})}</div></nav>
   </div>;
 }
