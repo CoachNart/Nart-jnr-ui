@@ -2,7 +2,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, History, Home, UserRound, Radar } from "lucide-react";
-import type { ReactNode } from "react";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { useEffect, useState, type ReactNode } from "react";
+import { auth } from "../lib/firebase";
 
 const nav=[
   {href:"/",label:"Home",icon:Home},
@@ -25,6 +27,8 @@ function MarketPulse(){
 
 export default function StandaloneShell({children,title}:{children:ReactNode;title?:string}){
   const path=usePathname();
+  const [user,setUser]=useState<User|null>(null);
+  useEffect(()=>onAuthStateChanged(auth,setUser),[]);
   return <div className="min-h-screen bg-[#050505] text-white">
     <header className="sticky top-0 z-30 border-b border-zinc-900 bg-[#050505]/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8">
@@ -33,7 +37,9 @@ export default function StandaloneShell({children,title}:{children:ReactNode;tit
         </Link>
         <div className="flex items-center gap-4">
           <MarketPulse />
-          <div className="h-8 w-8 rounded-full border border-zinc-800 bg-zinc-950" />
+          <Link href="/profile" aria-label="Open profile" className="h-8 w-8 overflow-hidden rounded-full border border-zinc-800 bg-zinc-950">
+            {user?.photoURL ? <img src={user.photoURL} alt="Profile" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center"><UserRound className="h-4 w-4 text-zinc-600" /></span>}
+          </Link>
         </div>
       </div>
     </header>
