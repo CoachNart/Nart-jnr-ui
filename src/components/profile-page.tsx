@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Clock3, Copy, KeyRound, LockKeyhole, LogOut, ShieldCheck, UserRound, Wallet, Loader2, ExternalLink, Sparkles } from "lucide-react";
+import { Clock3, Copy, KeyRound, LogOut, ShieldCheck, UserRound, Wallet, Loader2, ExternalLink, Sparkles } from "lucide-react";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import StandaloneShell from "./standalone-shell";
