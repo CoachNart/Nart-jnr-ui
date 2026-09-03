@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import BootLoader from "../components/boot-loader";
 
 export const metadata: Metadata = {
   title: "KitSetups — Trading Intelligence",
@@ -12,14 +13,7 @@ export const metadata: Metadata = {
     url: "https://kitsetups.xyz",
     siteName: "KitSetups",
     type: "website",
-    images: [
-      {
-        url: "https://www.t3kit.xyz/assets/images/logo.webp",
-        width: 1200,
-        height: 630,
-        alt: "KitSetups",
-      },
-    ],
+    images: [{ url: "https://www.t3kit.xyz/assets/images/logo.webp", width: 1200, height: 630, alt: "KitSetups" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -30,12 +24,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: LayoutProps<"/">) {
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <BootLoader />
+      </body>
     </html>
   );
 }
