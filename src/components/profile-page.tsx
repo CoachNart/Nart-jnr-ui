@@ -4,8 +4,9 @@ import { Clock3, Copy, KeyRound, LogOut, ShieldCheck, UserRound, Wallet, Loader2
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import StandaloneShell from "./standalone-shell";
+import { kitsetupsApi } from "../lib/api";
 
-const API_BASE=process.env.NEXT_PUBLIC_API_URL||"";
+const API_BASE=kitsetupsApi("");
 const PREMIUM_MS=30*24*60*60*1000;
 const PAYMENT_ADDRESS=process.env.NEXT_PUBLIC_BNB_USDT_PAYMENT_ADDRESS||"";
 
