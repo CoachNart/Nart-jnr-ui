@@ -56,7 +56,17 @@ export default function AuthPage() {
     setMessage("");
     try {
       const token = await user.getIdToken(true);
-      let account = await kitsetupsAuthFetch("/api/account", token);
+      let account: Response;
+      try {
+        account = await kitsetupsAuthFetch("/api/account", token);
+      } catch {
+        // Firebase authentication is already complete. Do not sign the user out
+        // because a temporary backend/network failure is not an auth failure.
+        router.replace(target);
+        router.refresh();
+        return;
+      }
+
       if (!account.ok && account.status === 404) {
         const response = await kitsetupsAuthFetch("/api/auth/register", token, { method: "POST", headers: await securityHeaders() });
         const data = await response.json().catch(() => ({}));
@@ -64,12 +74,28 @@ export default function AuthPage() {
         else if (!response.ok) throw new Error(data.error || `Account setup failed (${response.status}).`);
         else { router.replace(target); router.refresh(); return; }
       }
-      if (account.ok) { router.replace(target); router.refresh(); return; }
+
+      if (account.ok) {
+        router.replace(target);
+        router.refresh();
+        return;
+      }
+
+      // A 5xx/503 means the backend is unhealthy, not that Firebase login failed.
+      // Keep the Firebase session intact and let the destination retry its data calls.
+      if (account.status >= 500) {
+        router.replace(target);
+        router.refresh();
+        return;
+      }
+
       const data = await account.json().catch(() => ({}));
       throw new Error(data.error || `Account verification failed (${account.status}).`);
     } catch (error: any) {
       finishing.current = false;
-      await auth.signOut().catch(() => undefined);
+      const code = String(error?.code || "");
+      // Only clear Firebase auth for an actual authentication failure.
+      if (code.startsWith("auth/")) await auth.signOut().catch(() => undefined);
       setMessage(error?.message || "We could not complete Google authentication. Please try again.");
       setBusy(false);
     }
