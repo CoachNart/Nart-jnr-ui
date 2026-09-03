@@ -5,45 +5,6 @@ import { BarChart3, History, Home, UserRound, Radar } from "lucide-react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { useEffect, useState, type ReactNode } from "react";
 import { auth } from "../lib/firebase";
-
-const nav=[
-  {href:"/",label:"Home",icon:Home},
-  {href:"/setups",label:"Setups",icon:Radar},
-  {href:"/analysis",label:"Analysis",icon:BarChart3},
-  {href:"/history",label:"History",icon:History},
-  {href:"/profile",label:"Profile",icon:UserRound}
-];
-
-function MarketPulse(){
-  return <div className="flex items-center gap-2" aria-label="Live market pulse">
-    <span className="relative flex h-5 w-5 items-center justify-center">
-      <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400/30" />
-      <span className="relative h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.8)]" />
-      <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-red-400 shadow-[0_0_7px_rgba(248,113,113,.8)]" />
-    </span>
-    <span className="hidden font-mono text-[8px] font-medium tracking-[.18em] text-zinc-500 sm:block">LIVE PULSE</span>
-  </div>;
-}
-
-export default function StandaloneShell({children,title}:{children:ReactNode;title?:string}){
-  const path=usePathname();
-  const [user,setUser]=useState<User|null>(null);
-  useEffect(()=>onAuthStateChanged(auth,setUser),[]);
-  return <div className="min-h-screen bg-[#050505] text-white">
-    <header className="sticky top-0 z-30 border-b border-zinc-900 bg-[#050505]/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8">
-        <Link href="/" aria-label="KitSetups home" className="flex items-center">
-          <img src="https://www.t3kit.xyz/assets/images/logo.webp" alt="KitSetups" className="h-9 w-9 rounded-lg object-contain" />
-        </Link>
-        <div className="flex items-center gap-4">
-          <MarketPulse />
-          <Link href="/profile" aria-label="Open profile" className="h-8 w-8 overflow-hidden rounded-full border border-zinc-800 bg-zinc-950">
-            {user?.photoURL ? <img src={user.photoURL} alt="Profile" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center"><UserRound className="h-4 w-4 text-zinc-600" /></span>}
-          </Link>
-        </div>
-      </div>
-    </header>
-    <main className="mx-auto max-w-6xl px-4 pb-28 pt-7 md:px-8">{title&&<div className="mb-7"><p className="font-mono text-[9px] tracking-[.25em] text-cyan-400">KITSETUPS</p><h1 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1></div>}{children}</main>
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-900 bg-[#050505]/95 backdrop-blur"><div className="mx-auto grid max-w-lg grid-cols-5 px-2 py-2">{nav.map(({href,label,icon:Icon})=>{const active=path===href;return <Link key={href} href={href} className={`flex flex-col items-center gap-1 rounded-xl py-2 text-[9px] font-mono tracking-wide ${active?"text-cyan-400":"text-zinc-600"}`}><Icon className="h-4 w-4" strokeWidth={active?2.3:1.7}/>{label}</Link>})}</div></nav>
-  </div>;
-}
+const nav=[{href:"/",label:"Home",icon:Home},{href:"/setups",label:"Setups",icon:Radar},{href:"/analysis",label:"Analysis",icon:BarChart3},{href:"/history",label:"History",icon:History},{href:"/profile",label:"Profile",icon:UserRound}];
+function MarketPulse(){return <div className="flex items-center gap-2" aria-label="Live market pulse"><span className="relative flex h-5 w-5 items-center justify-center"><span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400/30"/><span className="relative h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.8)]"/><span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-red-400 shadow-[0_0_7px_rgba(248,113,113,.8)]"/></span><span className="hidden font-mono text-[8px] font-medium tracking-[.18em] text-zinc-500 sm:block">LIVE PULSE</span></div>}
+export default function StandaloneShell({children,title}:{children:ReactNode;title?:string}){const path=usePathname();const[user,setUser]=useState<User|null>(null);useEffect(()=>onAuthStateChanged(auth,setUser),[]);return <div className="min-h-screen bg-[#050505] text-white"><header className="sticky top-0 z-30 border-b border-zinc-900 bg-[#050505]/90 backdrop-blur"><div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8"><Link href="/" aria-label="KitSetups home" className="flex items-center"><img src="https://www.t3kit.xyz/assets/images/logo.webp" alt="KitSetups" className="h-9 w-9 rounded-lg object-contain"/></Link><div className="flex items-center gap-4"><MarketPulse/><Link href="/profile" aria-label="Open profile" className="h-8 w-8 overflow-hidden rounded-full border border-zinc-800 bg-zinc-950">{user?.photoURL?<img src={user.photoURL} alt="Profile" className="h-full w-full object-cover"/>:<span className="flex h-full w-full items-center justify-center"><UserRound className="h-4 w-4 text-zinc-600"/></span>}</Link></div></div></header><main className="mx-auto max-w-6xl px-4 pb-28 pt-7 md:px-8">{title&&<div className="mb-7"><p className="font-mono text-[9px] tracking-[.25em] text-cyan-400">KITSETUPS</p><h1 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1></div>}{children}</main><nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-900 bg-[#050505]/95 backdrop-blur"><div className="mx-auto grid max-w-lg grid-cols-5 px-2 py-2">{nav.map(({href,label,icon:Icon})=>{const active=path===href;return <Link key={href} href={href} className={`flex flex-col items-center gap-1 rounded-xl py-2 text-[9px] font-mono tracking-wide ${active?"text-cyan-400":"text-zinc-600"}`}><Icon className="h-4 w-4" strokeWidth={active?2.3:1.7}/>{label}</Link>})}</div></nav></div>}
