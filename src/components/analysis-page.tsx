@@ -29,15 +29,27 @@ export default function AnalysisPageView() {
     if (!token) return;
     setLoading(true); setError("");
     try {
-      const response = await kitsetupsAuthFetch(`/api/analysis/market?symbol=${encodeURIComponent(selected)}`, token);
-      const body = await response.json();
-      if (!response.ok || !body?.ok) throw new Error(body?.error || "Analysis request failed");
-      setAnalysis(body.data?.analysis || null);
-    } catch (err) { setError(err instanceof Error ? err.message : "Unable to load analysis."); setAnalysis(null); }
-    finally { setLoading(false); }
+      let response = await kitsetupsAuthFetch(`/api/analysis/market?symbol=${encodeURIComponent(selected)}`, token);
+      let body = await response.json().catch(() => ({}));
+
+      // Keep the page compatible with a backend instance that has the legacy
+      // analysis route while Render finishes rolling out the current route.
+      if (!response.ok || !body?.ok || !body?.data?.analysis) {
+        response = await kitsetupsAuthFetch(`/api/analysis?symbol=${encodeURIComponent(selected)}`, token);
+        body = await response.json().catch(() => ({}));
+      }
+
+      if (!response.ok || !body?.ok || !body?.data?.analysis) {
+        throw new Error(body?.error || `Analysis service returned ${response.status}`);
+      }
+      setAnalysis(body.data.analysis);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load analysis.");
+      setAnalysis(null);
+    } finally { setLoading(false); }
   }
 
-  useEffect(() => { if (token) load(symbol); }, [token, symbol]);
+  useEffect(() => { if (token) void load(symbol); }, [token, symbol]);
   useEffect(() => {
     if (!token) return;
     const timer = window.setInterval(() => { void load(symbol); }, 15000);
@@ -57,7 +69,7 @@ export default function AnalysisPageView() {
   return <StandaloneShell title="MARKET ANALYSIS">
     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div><p className="font-mono text-[9px] tracking-[.2em] text-cyan-400">MARKET READ</p><h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-100">Market analysis</h1><p className="mt-1 max-w-2xl text-xs leading-5 text-zinc-600">Live market intelligence from the trading engine: price, structure, momentum, volatility, risk and setup conditions.</p></div>
-      <div className="flex gap-2"><div className="relative"><select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="appearance-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 pr-9 text-xs text-zinc-200 outline-none">{SYMBOLS.map(s => <option key={s}>{s}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-3 h-3.5 w-3.5 text-zinc-600" /></div><button onClick={() => load()} disabled={loading || !token} className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-xs text-zinc-400 hover:text-cyan-300 disabled:opacity-40"><RefreshCw className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />Refresh</button></div>
+      <div className="flex gap-2"><div className="relative"><select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="appearance-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 pr-9 text-xs text-zinc-200 outline-none">{SYMBOLS.map(s => <option key={s}>{s}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-3 h-3.5 w-3.5 text-zinc-600" /></div><button onClick={() => void load()} disabled={loading || !token} className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-xs text-zinc-400 hover:text-cyan-300 disabled:opacity-40"><RefreshCw className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />Refresh</button></div>
     </div>
     {error && <div className="mb-5 rounded-2xl border border-amber-500/15 bg-amber-500/[.04] p-4 text-xs text-amber-300">{error}</div>}
     {loading && !analysis && <div className="grid gap-3 md:grid-cols-3">{[1,2,3].map(n => <div key={n} className="h-28 animate-pulse rounded-2xl border border-zinc-900 bg-zinc-950/70" />)}</div>}
