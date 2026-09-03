@@ -1,5 +1,5 @@
-import KitSetupsRouteBridge from "@/components/kitsetups-route-bridge";
+import { SetupsPage } from "@/components/standalone-pages";
 
-export default function SetupsPage() {
-  return <KitSetupsRouteBridge tab="setups" />;
+export default function Page() {
+  return <SetupsPage />;
 }
