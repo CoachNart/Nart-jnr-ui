@@ -17,10 +17,11 @@ function webglIdentity() {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
     if (!gl) return "";
-    const debug = gl.getExtension("WEBGL_debug_renderer_info") as any;
+    const context = gl as WebGLRenderingContext;
+    const debug = context.getExtension("WEBGL_debug_renderer_info") as any;
     return debug
-      ? `${gl.getParameter(debug.UNMASKED_VENDOR_WEBGL)}|${gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)}`
-      : String(gl.getParameter(gl.RENDERER) || "");
+      ? `${context.getParameter(debug.UNMASKED_VENDOR_WEBGL)}|${context.getParameter(debug.UNMASKED_RENDERER_WEBGL)}`
+      : String(context.getParameter(context.RENDERER) || "");
   } catch {
     return "";
   }
