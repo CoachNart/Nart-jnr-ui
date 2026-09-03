@@ -56,24 +56,24 @@ button {
   color: white;
 }
 
-.kitsetups-glow {
+.nart-glow {
   box-shadow:
     0 0 0 1px rgba(34, 211, 238, 0.08),
     0 0 45px rgba(34, 211, 238, 0.06);
 }
 
-.kitsetups-cyan-glow {
+.nart-cyan-glow {
   text-shadow:
     0 0 20px rgba(34, 211, 238, 0.25);
 }
 
-.kitsetups-premium-glow {
+.nart-premium-glow {
   box-shadow:
     0 0 0 1px rgba(245, 158, 11, 0.08),
     0 0 35px rgba(245, 158, 11, 0.045);
 }
 
-.kitsetups-card {
+.nart-card {
   background:
     linear-gradient(
       145deg,
@@ -84,14 +84,14 @@ button {
   -webkit-backdrop-filter: blur(18px);
 }
 
-.kitsetups-card:hover {
+.nart-card:hover {
   border-color: rgba(34, 211, 238, 0.16);
   box-shadow:
     0 0 0 1px rgba(34, 211, 238, 0.035),
     0 18px 60px rgba(0, 0, 0, 0.28);
 }
 
-.kitsetups-line {
+.nart-line {
   background: linear-gradient(
     90deg,
     transparent,
@@ -101,7 +101,7 @@ button {
   );
 }
 
-@keyframes kitsetups-pulse {
+@keyframes nart-pulse {
   0%,
   100% {
     opacity: 0.35;
@@ -114,8 +114,8 @@ button {
   }
 }
 
-.kitsetups-pulse {
-  animation: kitsetups-pulse 3s ease-in-out infinite;
+.nart-pulse {
+  animation: nart-pulse 3s ease-in-out infinite;
 }
 
 /* =========================================================
@@ -123,15 +123,15 @@ button {
    ========================================================= */
 
 :root {
-  --kitsetups-bg: #060708;
-  --kitsetups-panel: #0a0c0d;
-  --kitsetups-line: rgba(255,255,255,0.065);
-  --kitsetups-muted: #52575b;
-  --kitsetups-cyan: #22d3ee;
+  --nart-bg: #060708;
+  --nart-panel: #0a0c0d;
+  --nart-line: rgba(255,255,255,0.065);
+  --nart-muted: #52575b;
+  --nart-cyan: #22d3ee;
 }
 
 html {
-  background: var(--kitsetups-bg);
+  background: var(--nart-bg);
 }
 
 body {
@@ -208,7 +208,7 @@ body::before {
    TERMINAL CARDS
    ========================================================= */
 
-.kitsetups-card {
+.nart-card {
   position: relative;
   isolation: isolate;
   box-shadow:
@@ -216,7 +216,7 @@ body::before {
     0 20px 60px rgba(0,0,0,0.22);
 }
 
-.kitsetups-card::after {
+.nart-card::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -233,7 +233,7 @@ body::before {
   transition: opacity 250ms ease;
 }
 
-.kitsetups-card:hover::after {
+.nart-card:hover::after {
   opacity: 1;
 }
 
@@ -241,11 +241,11 @@ body::before {
    SIGNAL GLOW
    ========================================================= */
 
-.kitsetups-signal {
+.nart-signal {
   position: relative;
 }
 
-.kitsetups-signal::before {
+.nart-signal::before {
   content: "";
   position: absolute;
   left: 0;
@@ -263,7 +263,7 @@ body::before {
    SCAN ANIMATION
    ========================================================= */
 
-@keyframes kitsetups-scan {
+@keyframes nart-scan {
   0% {
     transform: translateY(-100%);
     opacity: 0;
@@ -283,7 +283,7 @@ body::before {
   }
 }
 
-.kitsetups-scanline {
+.nart-scanline {
   position: absolute;
   left: 0;
   right: 0;
@@ -292,7 +292,7 @@ body::before {
   background: rgba(34,211,238,0.18);
 
   animation:
-    kitsetups-scan 5s linear infinite;
+    nart-scan 5s linear infinite;
 
   pointer-events: none;
 }
@@ -301,7 +301,7 @@ body::before {
    LIVE DOT
    ========================================================= */
 
-@keyframes kitsetups-pulse {
+@keyframes nart-pulse {
   0%,
   100% {
     opacity: 0.45;
@@ -314,15 +314,15 @@ body::before {
   }
 }
 
-.kitsetups-live-dot {
-  animation: kitsetups-pulse 1.8s ease-in-out infinite;
+.nart-live-dot {
+  animation: nart-pulse 1.8s ease-in-out infinite;
 }
 
 /* =========================================================
    NUMBER / MARKET TYPOGRAPHY
    ========================================================= */
 
-.kitsetups-number {
+.nart-number {
   font-variant-numeric: tabular-nums;
   font-feature-settings:
     "tnum" 1,
@@ -345,7 +345,7 @@ body::before {
       #060708;
   }
 
-  .kitsetups-card {
+  .nart-card {
     box-shadow:
       0 14px 40px rgba(0,0,0,0.28);
   }
