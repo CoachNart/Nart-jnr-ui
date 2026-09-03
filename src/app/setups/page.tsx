@@ -1,2 +1,2 @@
-import { SetupsPage } from "../../components/standalone-pages";
-export default function Page(){return <SetupsPage/>;}
+import SetupsPageView from "../../components/setups-page";
+export default function Page(){return <SetupsPageView/>;}
