@@ -1,8 +1,4 @@
-const API_BASE = (
-  process.env.NEXT_PUBLIC_KITSETUPS_API ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://nart-jnr-1.onrender.com"
-).replace(/\/+$/, "");
+const API_BASE = "https://nart-jnr-1.onrender.com";
 
 export function kitsetupsApi(path: string): string {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
