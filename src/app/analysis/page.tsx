@@ -1,5 +1,5 @@
-import KitSetupsRouteBridge from "@/components/kitsetups-route-bridge";
+import { AnalysisPage } from "@/components/standalone-pages";
 
-export default function AnalysisPage() {
-  return <KitSetupsRouteBridge tab="analysis" />;
+export default function Page() {
+  return <AnalysisPage />;
 }
