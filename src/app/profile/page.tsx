@@ -1,2 +1,2 @@
-import { ProfilePage } from "../../components/standalone-pages";
+import ProfilePage from "../../components/profile-page";
 export default function Page(){return <ProfilePage/>;}
