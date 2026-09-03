@@ -3,8 +3,8 @@ const DIRECT_BACKEND_URL =
   process.env.NEXT_PUBLIC_KITSETUPS_BACKEND_URL ||
   "https://kitsetups-backend.onrender.com";
 
-const TRANSIENT_STATUSES = new Set([429, 502, 503, 504]);
-const FALLBACK_STATUSES = new Set([404, 502, 503, 504]);
+const TRANSIENT_STATUSES = new Set([429, 500, 502, 503, 504]);
+const FALLBACK_STATUSES = new Set([404, 500, 502, 503, 504]);
 const MAX_ATTEMPTS = 3;
 
 export function kitsetupsApi(path: string): string {
