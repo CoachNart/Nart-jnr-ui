@@ -1,7 +1,8 @@
 const API_PREFIX = "/api/kitsetups";
 
 export function kitsetupsApi(path: string): string {
-  return `${API_PREFIX}${path.startsWith("/") ? path : `/${path}`}`;
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${API_PREFIX}${normalized}`;
 }
 
 export async function kitsetupsFetch(
@@ -15,9 +16,12 @@ export async function kitsetupsFetch(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
+  headers.set("Accept", "application/json");
+
   return fetch(kitsetupsApi(path), {
     ...options,
     headers,
     cache: "no-store",
+    credentials: "same-origin",
   });
 }
