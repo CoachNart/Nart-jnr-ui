@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getRedirectResult, onAuthStateChanged, signInWithRedirect, type User } from "firebase/auth";
+import {
+  getRedirectResult,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  type User,
+} from "firebase/auth";
 import { auth, googleProvider } from "../../lib/firebase";
 import { securityHeaders } from "../../lib/device-security";
 import { kitsetupsAuthFetch } from "../../lib/api";
@@ -19,6 +25,7 @@ export default function AuthPage() {
     finishing.current = true;
     setBusy(true);
     setMessage("");
+
     try {
       const token = await user.getIdToken(true);
       const account = await kitsetupsAuthFetch("/api/account", token);
@@ -35,15 +42,18 @@ export default function AuthPage() {
           headers: await securityHeaders(),
         });
         const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-          throw new Error(data.error || "We could not complete your KitSetups account setup.");
+          throw new Error(data.error || `Account setup failed (${response.status}).`);
         }
+
         router.replace(next);
         router.refresh();
         return;
       }
 
-      throw new Error(`Account verification failed (${account.status}).`);
+      const data = await account.json().catch(() => ({}));
+      throw new Error(data.error || `Account verification failed (${account.status}).`);
     } catch (error: any) {
       finishing.current = false;
       await auth.signOut().catch(() => undefined);
@@ -57,6 +67,7 @@ export default function AuthPage() {
     if (requested?.startsWith("/")) setNext(requested);
 
     let active = true;
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (active && user) void finish(user);
     });
@@ -74,6 +85,7 @@ export default function AuthPage() {
     };
 
     void completeRedirect();
+
     return () => {
       active = false;
       unsubscribe();
@@ -83,11 +95,25 @@ export default function AuthPage() {
   const google = async () => {
     setBusy(true);
     setMessage("");
+
     try {
-      await signInWithRedirect(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      await finish(result.user);
     } catch (error: any) {
+      const code = String(error?.code || "");
+
+      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request") {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectError: any) {
+          setMessage(redirectError?.message || "Google authentication failed. Please try again.");
+        }
+      } else {
+        setMessage(error?.message || "Google authentication failed. Please try again.");
+      }
+
       setBusy(false);
-      setMessage(error?.message || "Google authentication failed. Please try again.");
     }
   };
 
