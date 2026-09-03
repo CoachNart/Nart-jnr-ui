@@ -1,4 +1,4 @@
-const API_BASE = "https://nart-jnr-1.onrender.com";
+const API_BASE = "https://kitsetups-backend.onrender.com";
 
 export function kitsetupsApi(path: string): string {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
