@@ -1,67 +1,84 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getRedirectResult, signInWithRedirect } from "firebase/auth";
+import { getRedirectResult, onAuthStateChanged, signInWithRedirect, type User } from "firebase/auth";
 import { auth, googleProvider } from "../../lib/firebase";
 import { securityHeaders } from "../../lib/device-security";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
-
-async function backend(path: string, token: string, method = "GET") {
-  const headers: HeadersInit = { Authorization: `Bearer ${token}` };
-  if (method === "POST") Object.assign(headers, await securityHeaders());
-  return fetch(`${API_BASE}${path}`, { method, headers, cache: "no-store" });
-}
+import { kitsetupsAuthFetch } from "../../lib/api";
 
 export default function AuthPage() {
   const router = useRouter();
   const [next, setNext] = useState("/");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const finishing = useRef(false);
+
+  const finish = async (user: User) => {
+    if (finishing.current) return;
+    finishing.current = true;
+    setBusy(true);
+    setMessage("");
+    try {
+      const token = await user.getIdToken(true);
+      const account = await kitsetupsAuthFetch("/api/account", token);
+
+      if (account.ok) {
+        router.replace(next);
+        router.refresh();
+        return;
+      }
+
+      if (account.status === 404) {
+        const response = await kitsetupsAuthFetch("/api/auth/register", token, {
+          method: "POST",
+          headers: await securityHeaders(),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "We could not complete your KitSetups account setup.");
+        }
+        router.replace(next);
+        router.refresh();
+        return;
+      }
+
+      throw new Error(`Account verification failed (${account.status}).`);
+    } catch (error: any) {
+      finishing.current = false;
+      await auth.signOut().catch(() => undefined);
+      setMessage(error?.message || "We could not complete Google authentication. Please try again.");
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("next");
     if (requested?.startsWith("/")) setNext(requested);
 
+    let active = true;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (active && user) void finish(user);
+    });
+
     const completeRedirect = async () => {
       try {
         const result = await getRedirectResult(auth);
-        if (result?.user) await finish(result.user);
+        if (active && result?.user) void finish(result.user);
       } catch (error: any) {
-        setMessage(error?.message || "Google authentication failed. Please try again.");
-      } finally {
-        setBusy(false);
+        if (active) {
+          setMessage(error?.message || "Google authentication failed. Please try again.");
+          setBusy(false);
+        }
       }
     };
+
     void completeRedirect();
-  }, []);
-
-  const finish = async (user: any) => {
-    const token = await user.getIdToken(true);
-    const account = await backend("/api/account", token);
-
-    if (account.ok) {
-      router.replace(next);
-      router.refresh();
-      return;
-    }
-
-    if (account.status === 404) {
-      const response = await backend("/api/auth/register", token, "POST");
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        await auth.signOut();
-        throw new Error(data.error || "We could not complete your KitSetups account setup.");
-      }
-      router.replace(next);
-      router.refresh();
-      return;
-    }
-
-    await auth.signOut();
-    throw new Error("We could not verify your KitSetups account. Please try again.");
-  };
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [next]);
 
   const google = async () => {
     setBusy(true);
