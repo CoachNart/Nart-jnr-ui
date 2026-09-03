@@ -4,7 +4,9 @@ const ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
 async function proxy(request: Request, context: { params: Promise<{ path: string[] }> }) {
   const { path = [] } = await context.params;
-  const target = `${BACKEND_URL}/api/${path.join("/")}${new URL(request.url).search}`;
+  const backendPath = `/${path.join("/")}`;
+  const targetPath = backendPath.startsWith("/api/") ? backendPath : `/api${backendPath}`;
+  const target = `${BACKEND_URL}${targetPath}${new URL(request.url).search}`;
 
   const headers = new Headers();
   request.headers.forEach((value, key) => {
