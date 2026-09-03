@@ -29,16 +29,8 @@ export default function AnalysisPageView() {
     if (!token) return;
     setLoading(true); setError("");
     try {
-      let response = await kitsetupsAuthFetch(`/api/analysis/market?symbol=${encodeURIComponent(selected)}`, token);
-      let body = await response.json().catch(() => ({}));
-
-      // Keep the page compatible with a backend instance that has the legacy
-      // analysis route while Render finishes rolling out the current route.
-      if (!response.ok || !body?.ok || !body?.data?.analysis) {
-        response = await kitsetupsAuthFetch(`/api/analysis?symbol=${encodeURIComponent(selected)}`, token);
-        body = await response.json().catch(() => ({}));
-      }
-
+      const response = await kitsetupsAuthFetch(`/api/analysis/market?symbol=${encodeURIComponent(selected)}`, token);
+      const body = await response.json().catch(() => ({}));
       if (!response.ok || !body?.ok || !body?.data?.analysis) {
         throw new Error(body?.error || `Analysis service returned ${response.status}`);
       }
@@ -52,7 +44,7 @@ export default function AnalysisPageView() {
   useEffect(() => { if (token) void load(symbol); }, [token, symbol]);
   useEffect(() => {
     if (!token) return;
-    const timer = window.setInterval(() => { void load(symbol); }, 15000);
+    const timer = window.setInterval(() => { void load(symbol); }, 60000);
     return () => window.clearInterval(timer);
   }, [token, symbol]);
 
