@@ -48,7 +48,7 @@ export default function AuthPage() {
         return;
       }
     } else {
-      const response = await backend("/api/account");
+      const response = await backend("/api/account", token);
       if (!response.ok) {
         await auth.signOut();
         setMessage(response.status === 404 ? "This login is not registered for KitSetups. Please create your KitSetups account first." : "We could not verify your KitSetups account. Please try again.");
