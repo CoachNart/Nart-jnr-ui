@@ -22,25 +22,30 @@ export default function AuthPage() {
 
     try {
       const token = await user.getIdToken(true);
-      const account = await kitsetupsAuthFetch("/api/account", token);
+      let account = await kitsetupsAuthFetch("/api/account", token);
 
-      if (account.ok) {
-        router.replace(target);
-        router.refresh();
-        return;
-      }
-
-      if (account.status === 404) {
+      if (!account.ok && account.status === 404) {
         const response = await kitsetupsAuthFetch("/api/auth/register", token, {
           method: "POST",
           headers: await securityHeaders(),
         });
         const data = await response.json().catch(() => ({}));
 
-        if (!response.ok) {
+        // A previous account can legitimately exist after logout. Treat that
+        // response as a successful login and re-read the account instead of
+        // signing the user out.
+        if (response.status === 409 && data.code === "ACCOUNT_EXISTS") {
+          account = await kitsetupsAuthFetch("/api/account", token);
+        } else if (!response.ok) {
           throw new Error(data.error || `Account setup failed (${response.status}).`);
+        } else {
+          router.replace(target);
+          router.refresh();
+          return;
         }
+      }
 
+      if (account.ok) {
         router.replace(target);
         router.refresh();
         return;
@@ -65,6 +70,7 @@ export default function AuthPage() {
 
     const complete = async () => {
       try {
+        await auth.authStateReady();
         const result = await getRedirectResult(auth);
         if (!active) return;
         if (result?.user) {
