@@ -1,5 +1,5 @@
-import KitSetupsRouteBridge from "@/components/kitsetups-route-bridge";
+import { ProfilePage } from "@/components/standalone-pages";
 
-export default function ProfilePage() {
-  return <KitSetupsRouteBridge tab="profile" />;
+export default function Page() {
+  return <ProfilePage />;
 }
