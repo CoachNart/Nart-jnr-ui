@@ -17,15 +17,15 @@ export default function BootLoader() {
   return (
     <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center overflow-hidden bg-[#030609] text-white">
       <div className="relative flex flex-col items-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-[23px] border border-cyan-300/20 bg-white/[.02] shadow-[0_0_45px_rgba(34,211,238,.16)]">
+        <div className="flex h-16 w-16 items-center justify-center rounded-[19px] border border-cyan-300/15 bg-white/[.018] shadow-[0_0_34px_rgba(34,211,238,.11)]">
           <img
             src="https://www.t3kit.xyz/assets/images/logo.webp"
             alt="KitSetups"
-            className="h-12 w-12 rounded-xl object-contain"
+            className="h-8 w-8 animate-[loader-logo_2.4s_ease-in-out_infinite] rounded-lg object-contain"
           />
         </div>
 
-        <p className="mt-6 font-mono text-[9px] tracking-[.35em] text-cyan-300">
+        <p className="mt-5 font-mono text-[9px] tracking-[.35em] text-cyan-300">
           KITSETUPS
         </p>
 
