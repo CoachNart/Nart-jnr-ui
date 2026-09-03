@@ -2,13 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getRedirectResult,
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithRedirect,
-  type User,
-} from "firebase/auth";
+import { getRedirectResult, signInWithPopup, signInWithRedirect, type User } from "firebase/auth";
 import { auth, googleProvider } from "../../lib/firebase";
 import { securityHeaders } from "../../lib/device-security";
 import { kitsetupsAuthFetch } from "../../lib/api";
@@ -20,7 +14,7 @@ export default function AuthPage() {
   const [message, setMessage] = useState("");
   const finishing = useRef(false);
 
-  const finish = async (user: User) => {
+  const finish = async (user: User, target = next) => {
     if (finishing.current) return;
     finishing.current = true;
     setBusy(true);
@@ -31,7 +25,7 @@ export default function AuthPage() {
       const account = await kitsetupsAuthFetch("/api/account", token);
 
       if (account.ok) {
-        router.replace(next);
+        router.replace(target);
         router.refresh();
         return;
       }
@@ -47,7 +41,7 @@ export default function AuthPage() {
           throw new Error(data.error || `Account setup failed (${response.status}).`);
         }
 
-        router.replace(next);
+        router.replace(target);
         router.refresh();
         return;
       }
@@ -64,33 +58,38 @@ export default function AuthPage() {
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("next");
-    if (requested?.startsWith("/")) setNext(requested);
+    const target = requested?.startsWith("/") ? requested : "/";
+    setNext(target);
 
     let active = true;
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (active && user) void finish(user);
-    });
-
-    const completeRedirect = async () => {
+    const complete = async () => {
       try {
         const result = await getRedirectResult(auth);
-        if (active && result?.user) void finish(result.user);
+        if (!active) return;
+        if (result?.user) {
+          await finish(result.user, target);
+          return;
+        }
+
+        if (auth.currentUser) {
+          await finish(auth.currentUser, target);
+        }
       } catch (error: any) {
         if (active) {
           setMessage(error?.message || "Google authentication failed. Please try again.");
           setBusy(false);
+          finishing.current = false;
         }
       }
     };
 
-    void completeRedirect();
+    void complete();
 
     return () => {
       active = false;
-      unsubscribe();
     };
-  }, [next]);
+  }, []);
 
   const google = async () => {
     setBusy(true);
@@ -114,6 +113,7 @@ export default function AuthPage() {
       }
 
       setBusy(false);
+      finishing.current = false;
     }
   };
 
@@ -149,9 +149,7 @@ export default function AuthPage() {
               </div>
             )}
 
-            <p className="mt-7 text-center text-[10px] leading-4 text-zinc-700">
-              Secure Google authentication. No passwords required.
-            </p>
+            <p className="mt-7 text-center text-[10px] leading-4 text-zinc-700">Secure Google authentication. No passwords required.</p>
           </div>
 
           <p className="mt-6 text-center text-[9px] tracking-[.18em] text-zinc-800">KITSETUPS</p>
